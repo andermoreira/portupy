@@ -1,5 +1,7 @@
 import unittest
-from transpilador_pt.transpiler import transpila, ErroDeTraducao
+from transpilador_pt.transpiler import transpila, transpila_canonico, ErroDeTraducao
+
+
 
 
 class TestTranspiler(unittest.TestCase):
@@ -91,6 +93,56 @@ class TestTranspiler(unittest.TestCase):
         codigo_comparacao = transpila("se valor eh valida(alvo=1):\n    passe\n")
         self.assertIn("valor ==", codigo_comparacao)
 
+    def test_transpila_canonico_substitui_builtins_essenciais(self):
+        """Valida que transpila_canonico gera Python puro traduzindo builtins (AC-01)."""
+        codigo_pt = (
+            "para i em intervalo(3):\n"
+            "    mostre(f'indice: {i}')\n"
+            "nome = leia('Nome: ')\n"
+            "t = tamanho(nome)\n"
+        )
+        codigo_py = transpila_canonico(codigo_pt)
+        codigo_sem_espaco = codigo_py.replace(" ", "")
+        self.assertIn("foriinrange(3):", codigo_sem_espaco)
+        self.assertIn("print(f'indice:{i}')", codigo_sem_espaco)
+        self.assertIn("input('Nome:')", codigo_sem_espaco)
+        self.assertIn("len(nome)", codigo_sem_espaco)
+
+    def test_transpila_canonico_preserva_atributos_de_objetos(self):
+        """Valida que atributos precedidos por '.' não são renomeados (AC-02)."""
+        codigo_pt = "self.tamanho = 10\nx = carro.tipo\nobj.mostre()"
+        codigo_py = transpila_canonico(codigo_pt)
+        codigo_sem_espaco = codigo_py.replace(" ", "")
+        self.assertIn("self.tamanho=10", codigo_sem_espaco)
+        self.assertIn("carro.tipo", codigo_sem_espaco)
+        self.assertIn("obj.mostre()", codigo_sem_espaco)
+        self.assertNotIn("len", codigo_py)
+
+    def test_transpila_canonico_preserva_variavel_em_atribuicao(self):
+        """Valida que variáveis criadas com nome de builtin não sofrem colisão indevida."""
+        codigo_pt = "lista = [1, 2, 3]\nmostre(tamanho(lista))"
+        codigo_py = transpila_canonico(codigo_pt)
+        codigo_sem_espaco = codigo_py.replace(" ", "")
+        self.assertIn("lista=[1,2,3]", codigo_sem_espaco)
+        self.assertIn("print(len(lista))", codigo_sem_espaco)
+        self.assertNotIn("list=[1,2,3]", codigo_sem_espaco)
+        self.assertNotIn("len(list)", codigo_sem_espaco)
+
+    def test_transpila_canonico_execucao_autonoma(self):
+        """Valida que o código exportado executa diretamente sem globals especiais (AC-03)."""
+        codigo_pt = (
+            "itens = [10, 20]\n"
+            "se tamanho(itens) eh 2:\n"
+            "    resultado = 'ok'\n"
+        )
+        codigo_py = transpila_canonico(codigo_pt)
+        ns = {}
+        # Executa em namespace limpo sem BUILTINS_PT
+        exec(codigo_py, {}, ns)
+        self.assertEqual("ok", ns.get("resultado"))
+
+
 
 if __name__ == "__main__":
     unittest.main()
+

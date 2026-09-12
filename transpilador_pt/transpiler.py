@@ -16,7 +16,7 @@ import keyword
 import token
 import tokenize
 
-from .dicionario import MAPA
+from .dicionario import MAPA, BUILTINS_CANONICOS
 
 
 class ErroDeTraducao(Exception):
@@ -50,12 +50,104 @@ def _has_assignment_until_statement_end(
 SINGLETONS_DE_IDENTIDADE = {"nulo", "None", "verdadeiro", "falso", "True", "False"}
 
 
-def transpila(codigo_pt: str) -> str:
-    """Converte código-fonte em português para código Python equivalente.
+def _substitui_em_fstring(literal_fstring: str) -> str:
+    """Traduz expressões interpoladas dentro de f-strings para Python canônico."""
+    quote_idx = -1
+    for idx, c in enumerate(literal_fstring[:4]):
+        if c in ('"', "'"):
+            quote_idx = idx
+            break
+    if quote_idx == -1:
+        return literal_fstring
 
-    Preserva números de linha 1:1 com o original, o que permite que
-    tracebacks apontem para a linha certa do arquivo .ptpy do usuário.
-    """
+    prefixo = literal_fstring[:quote_idx].lower()
+    if "f" not in prefixo:
+        return literal_fstring
+
+    delimitador = literal_fstring[quote_idx:]
+    if delimitador.startswith(('"""', "'''")):
+        quotes = delimitador[:3]
+        miolo = delimitador[3:-3]
+    else:
+        quotes = delimitador[:1]
+        miolo = delimitador[1:-1]
+
+    resultado = []
+    i = 0
+    n = len(miolo)
+    while i < n:
+        if miolo[i : i + 2] == "{{":
+            resultado.append("{{")
+            i += 2
+            continue
+        if miolo[i : i + 2] == "}}":
+            resultado.append("}}")
+            i += 2
+            continue
+        if miolo[i] == "{":
+            inicio = i + 1
+            nivel_chaves = 0
+            nivel_paren = 0
+            nivel_colch = 0
+            em_aspas = None
+            j = inicio
+            spec_format = ""
+            expr_bruta = ""
+            while j < n:
+                ch = miolo[j]
+                if em_aspas:
+                    if ch == "\\" and j + 1 < n:
+                        j += 2
+                        continue
+                    if ch == em_aspas:
+                        em_aspas = None
+                else:
+                    if ch in ('"', "'"):
+                        em_aspas = ch
+                    elif ch == "(":
+                        nivel_paren += 1
+                    elif ch == ")":
+                        nivel_paren = max(0, nivel_paren - 1)
+                    elif ch == "[":
+                        nivel_colch += 1
+                    elif ch == "]":
+                        nivel_colch = max(0, nivel_colch - 1)
+                    elif ch == "{":
+                        nivel_chaves += 1
+                    elif ch == "}":
+                        if nivel_chaves == 0 and nivel_paren == 0 and nivel_colch == 0:
+                            break
+                        nivel_chaves -= 1
+                    elif (ch == ":" or ch == "!") and nivel_chaves == 0 and nivel_paren == 0 and nivel_colch == 0:
+                        expr_bruta = miolo[inicio:j]
+                        k = j
+                        while k < n and miolo[k] != "}":
+                            k += 1
+                        spec_format = miolo[j:k]
+                        j = k
+                        break
+                j += 1
+
+            if not spec_format:
+                expr_bruta = miolo[inicio:j]
+
+            try:
+                expr_traduzida = _transpila_core(expr_bruta, traduzir_builtins=True).strip()
+            except Exception:
+                expr_traduzida = expr_bruta
+
+            resultado.append("{" + expr_traduzida + spec_format + "}")
+            i = j + 1
+        else:
+            resultado.append(miolo[i])
+            i += 1
+
+    return literal_fstring[:quote_idx] + quotes + "".join(resultado) + quotes
+
+
+
+def _transpila_core(codigo_pt: str, traduzir_builtins: bool = False) -> str:
+    """Núcleo de tradução léxica PT -> Python com controle de tradução de builtins."""
     tokens_saida = []
     leitor = io.StringIO(codigo_pt).readline
 
@@ -145,9 +237,28 @@ def transpila(codigo_pt: str) -> str:
                         f"ex.: '{valor}_valor'."
                     )
                 valor = MAPA[valor]
+            elif traduzir_builtins and valor in BUILTINS_CANONICOS:
+                # Na exportação canônica, substitui builtins pedagógicos por seus equivalentes Python.
+                # Se for alvo de atribuição ou definição de função, mantém o identificador local.
+                eh_definicao_funcao = anterior is not None and anterior.type == token.NAME and anterior.string in ("def", "funcao", "função")
+                eh_alvo_atribuicao = _has_assignment_until_statement_end(fluxo, i)
+                
+                # Tipos embutidos ("lista", "conjunto", "tupla", etc.) só viram "list", "set", etc.
+                # se forem chamados como construtores com '(' ou usados em anotação de tipo.
+                # Caso contrário, representam variáveis do aluno (ex.: tamanho(lista)).
+                eh_tipo_embutido = valor in ("lista", "dicionario", "dicionário", "conjunto", "tupla", "texto", "inteiro", "decimal", "booleano")
+                eh_chamada_ou_anotacao = (proximo is not None and proximo.string == "(") or (anterior is not None and anterior.string in (":", "->", "["))
+                
+                if not eh_definicao_funcao and not eh_alvo_atribuicao:
+                    if not eh_tipo_embutido or eh_chamada_ou_anotacao:
+                        valor = BUILTINS_CANONICOS[valor]
+
+        elif tipo == token.STRING and traduzir_builtins:
+            valor = _substitui_em_fstring(valor)
 
         tokens_saida.append((tipo, valor))
         i += 1
+
 
     try:
         return tokenize.untokenize(tokens_saida)
@@ -155,7 +266,26 @@ def transpila(codigo_pt: str) -> str:
         raise ErroDeTraducao(f"Falha ao remontar o código traduzido: {exc}") from exc
 
 
+def transpila(codigo_pt: str) -> str:
+    """Converte código-fonte em português para código Python equivalente.
+
+    Preserva números de linha 1:1 com o original, o que permite que
+    tracebacks apontem para a linha certa do arquivo .ptpy do usuário.
+    """
+    return _transpila_core(codigo_pt, traduzir_builtins=False)
+
+
+def transpila_canonico(codigo_pt: str) -> str:
+    """Converte código-fonte em português para código Python canônico e autônomo (ADR-003).
+
+    Substitui tanto a sintaxe estrutural quanto nomes de funções embutidas (mostre -> print,
+    tamanho -> len, etc.), permitindo execução pura sem necessidade do pacote transpilador_pt.
+    """
+    return _transpila_core(codigo_pt, traduzir_builtins=True)
+
+
 def palavra_e_reservada_em_pt(nome: str) -> bool:
     """Útil para avisar o usuário se ele tentar nomear uma variável
     com uma palavra que é reservada nesta camada (ex.: 'para', 'em', 'eh')."""
     return nome in MAPA or nome in ("eh", "é") or keyword.iskeyword(nome)
+

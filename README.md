@@ -7,30 +7,42 @@ com o módulo `tokenize` da stdlib (sem parser próprio).
 
 ```
 transpilador_pt/
-├── dicionario.py   # palavras-chave estruturais + builtins PT em runtime
-├── transpiler.py   # transpilador com fusão de tokens e sensibilidade a contexto
+├── dicionario.py   # palavras-chave estruturais + builtins PT em runtime e canônicos
+├── transpiler.py   # transpilador com fusão de tokens, sensibilidade a contexto e exportador canônico
+├── transicao.py    # renderizador bilíngue lado a lado para transição pedagógica
 ├── erros.py        # tradução de exceções e formatação com apontador visual
 ├── executor.py      # compila e roda com injeção de builtins PT
 └── exemplos/
     ├── ola.ptpy
     ├── erro.ptpy
     └── condicionais.ptpy
-adr/                # Architecture Decision Records (ADR 001, ADR 002)
-specs/              # especificações arquivadas e passos de implementação
+adr/                # Architecture Decision Records (ADR 001, ADR 002, ADR 003)
+specs/              # especificações ativas, arquivadas e passos de implementação
 tests/              # suíte de testes automatizados (unittest)
-cli.py              # python3 cli.py arquivo.ptpy [--mostrar-python]
+cli.py              # interface de linha de comando com modos de execução, transição e exportação
 ```
 
 ## Como rodar
 
 ```bash
-# Executar scripts de exemplo
+# 1. Executar scripts de exemplo normalmente
 python3 cli.py transpilador_pt/exemplos/ola.ptpy
 python3 cli.py transpilador_pt/exemplos/condicionais.ptpy
 python3 cli.py transpilador_pt/exemplos/erro.ptpy
-python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python   # ver o Python gerado
 
-# Executar a suíte de testes automatizados
+# 2. Modo de transição bilíngue (lado a lado)
+python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --lado-a-lado
+# (ou use o alias: python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --modo-transicao)
+
+# 3. Exportar para código Python canônico independente
+python3 cli.py transpilador_pt/exemplos/ola.ptpy --exportar                # imprime no terminal
+python3 cli.py transpilador_pt/exemplos/ola.ptpy --exportar meu_script.py  # salva em arquivo
+python3 meu_script.py                                                      # roda sem o transpilador!
+
+# 4. Ver o Python intermediário de compilação
+python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python
+
+# 5. Executar a suíte de testes automatizados
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
@@ -43,7 +55,9 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 - **Condicionais encadeadas naturais (ADR-002):** Suporte completo a `senao se`, `senão se`, `senaose` e `senãose` transpilando para `elif` do Python (com `ouse` mantido por retrocompatibilidade).
 - **Resolução semântica segura de 'eh'/'é' (ADR-002):** Traduz para `is` quando comparado a singletons (`nulo`, `verdadeiro`, `falso`) e para `==` quando comparado a literais e variáveis, prevenindo `SyntaxWarning` e armadilhas de identidade de objetos.
 - **Operadores compostos de negação e pertinência (ADR-002):** Expressões como `nao eh` (`is not` / `!=`) e `nao em` (`not in`) funcionam naturalmente.
-- **Variáveis intuitivas liberadas:** Nomes comuns como `lista = [1, 2, 3]`, `texto = "olá"` ou `tipo = 10` são permitidos livremente e não colidem com palavras reservadas.
+- **Modo de Transição Bilíngue (ADR-003):** Flag `--lado-a-lado` (ou `--modo-transicao`) exibe tabela comparativa sincronizada linha a linha entre o código em português e o Python canônico com ajuste automático à largura do terminal.
+- **Exportador para Python Canônico Puro (ADR-003):** Flag `--exportar [destino.py]` traduz chamadas de builtins pedagógicos (`mostre` -> `print`, `tamanho` -> `len`, `intervalo` -> `range`, etc.) gerando scripts Python 100% autônomos que rodam diretamente em qualquer interpretador Python padrão sem requerer o transpilador.
+- **Variáveis intuitivas liberadas:** Nomes comuns como `lista = [1, 2, 3]`, `texto = "olá"` ou `tipo = 10` são permitidos livremente e não colidem com palavras reservadas nem são alterados indevidamente na exportação.
 - **Preservação de atributos de objetos:** Acessos e atribuições como `objeto.tipo` e `self.tipo = valor` são preservados sem substituição indevida de tokens.
 - **Números de linha e apontador visual:** Tracebacks apontam 1:1 para a linha do `.ptpy` original, e erros de compilação exibem o trecho de código com o cursor `^`.
 - **Tradução didática de erros:** Cobertura de `SyntaxError`, `IndentationError`, `IndexError`, `NameError`, `ZeroDivisionError`, `TypeError`, `AttributeError`, `ValueError`, entre outros.
@@ -53,9 +67,10 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 
 - **Apenas a gramática inicial e builtins curados são em português.** Bibliotecas externas (`requests`, `pandas`) continuam em inglês por design para servir de rampa de acesso, não de ecossistema isolado.
 - **Colisão de palavras estruturais.** `para`, `em`, `e`, `ou`, `com` são reservadas para a gramática, exatamente como `for`/`in`/`and`/`or`/`with` são em inglês.
-- **Modo de transição bilíngue.** A exibição lado a lado em tempo real e o exportador limpo para Python canônico estão planejados para a Fase 3.
 
-## Próximos passos sugeridos
+## Roadmap
 
-1. **Fase 3:** Implementar o modo de transição bilíngue (`--modo-transicao`) e comando de exportação para `.py` canônico (`--exportar`).
-2. **Fase 4:** Empacotar com **Pyodide** para execução 100% no navegador sem instalação local.
+1. [x] **Fase 1:** Estabilização do protótipo (injeção em runtime, f-strings, preservação de atributos, diagnóstico rico com cursor `^`).
+2. [x] **Fase 2:** Ergonomia semântica de condicionais (`senao se`, resolução contextual de `eh`/`é`, operadores `nao eh` e `nao em`).
+3. [x] **Fase 3:** Modo de transição bilíngue (`--lado-a-lado`) e exportador autônomo para Python canônico (`--exportar`).
+4. [ ] **Fase 4:** Playground Web empacotado com **Pyodide** para experimentação direta no navegador sem instalação local.

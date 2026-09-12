@@ -92,3 +92,35 @@ BUILTINS_PT = {
 # MAPA utilizado pelo transpilador léxico para alterar tokens sintáticos
 MAPA = PALAVRAS_CHAVE
 
+# Mapeamento de builtins pedagógicos para nomes canônicos do Python (ADR-003)
+BUILTINS_CANONICOS = {
+    "mostre": "print",
+    "mostra": "print",
+    "leia": "input",
+    "tamanho": "len",
+    "intervalo": "range",
+    "tipo": "type",
+    "texto": "str",
+    "inteiro": "int",
+    "decimal": "float",
+    "booleano": "bool",
+    "lista": "list",
+    "dicionario": "dict",
+    "dicionário": "dict",
+    "conjunto": "set",
+    "tupla": "tuple",
+    "ordene": "sorted",
+    "inverta": "reversed",
+    "some": "sum",
+    "maximo": "max",
+    "máximo": "max",
+    "minimo": "min",
+    "mínimo": "min",
+    "absoluto": "abs",
+    "arredonde": "round",
+    "enumere": "enumerate",
+    "zip": "zip",
+    "mapeie": "map",
+    "filtre": "filter",
+}
+
