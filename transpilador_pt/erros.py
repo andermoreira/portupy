@@ -14,7 +14,7 @@ primeiro que casar vence.
 from __future__ import annotations
 
 import re
-import traceback
+from difflib import SequenceMatcher
 from typing import Callable
 
 Regra = tuple[type[BaseException], re.Pattern, Callable[[re.Match], str]]
@@ -137,7 +137,42 @@ def traduz_excecao(exc: BaseException) -> str | None:
     return None
 
 
-def formata_erro_amigavel(exc: BaseException, linhas_fonte_pt: list[str]) -> str:
+def _map_generated_column_to_source(column: int, source_line: str, generated_line: str) -> int:
+    """Map a column from translated Python back to the original source line."""
+    generated_position = max(0, column - 1)
+    opcodes = SequenceMatcher(
+        None, source_line, generated_line, autojunk=False,
+    ).get_opcodes()
+
+    # A replacement can be followed by a deletion when untokenize adds spacing.
+    # A parser position after the translated text then maps to the source end.
+    for tag, source_start, source_end, generated_start, generated_end in opcodes:
+        if tag == "delete" and generated_start == generated_end == generated_position:
+            return source_end + 1
+
+    for tag, source_start, source_end, generated_start, generated_end in opcodes:
+        if generated_start <= generated_position <= generated_end:
+            if tag == "equal":
+                return source_start + (generated_position - generated_start) + 1
+            if tag == "replace":
+                if generated_position == generated_end:
+                    return source_end + 1
+                if generated_position == generated_start:
+                    return source_start + 1
+                ratio = (generated_position - generated_start) / max(
+                    1, generated_end - generated_start,
+                )
+                return round(source_start + ratio * (source_end - source_start)) + 1
+            return source_start + 1
+
+    return min(generated_position, len(source_line)) + 1
+
+
+def formata_erro_amigavel(
+    exc: BaseException,
+    linhas_fonte_pt: list[str],
+    linhas_fonte_py: list[str] | None = None,
+) -> str:
     """Monta uma mensagem de erro amigável apontando para a linha do
     arquivo .ptpy original (não do Python gerado internamente)."""
     linha_numero = None
@@ -158,11 +193,18 @@ def formata_erro_amigavel(exc: BaseException, linhas_fonte_pt: list[str]) -> str
     partes = [f"⚠️  Deu erro do tipo: {type(exc).__name__}"]
     if linha_numero and 1 <= linha_numero <= len(linhas_fonte_pt):
         trecho = linhas_fonte_pt[linha_numero - 1]
-        partes.append(f"   Na linha {linha_numero}: {trecho.strip()}")
+        prefixo_trecho = f"   Na linha {linha_numero}: "
+        partes.append(prefixo_trecho + trecho.strip())
         if coluna is not None and coluna > 0:
+            if linhas_fonte_py and linha_numero <= len(linhas_fonte_py):
+                coluna = _map_generated_column_to_source(
+                    coluna,
+                    trecho,
+                    linhas_fonte_py[linha_numero - 1],
+                )
             recuo_original = len(trecho) - len(trecho.lstrip())
             coluna_ajustada = max(1, coluna - recuo_original)
-            partes.append("   " + " " * 13 + " " * (coluna_ajustada - 1) + "^")
+            partes.append(" " * len(prefixo_trecho) + " " * (coluna_ajustada - 1) + "^")
 
     explicacao = traduz_excecao(exc)
     if explicacao:
@@ -171,4 +213,3 @@ def formata_erro_amigavel(exc: BaseException, linhas_fonte_pt: list[str]) -> str
         partes.append(f"   Detalhe técnico (ainda sem tradução): {exc}")
 
     return "\n".join(partes)
-

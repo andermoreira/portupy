@@ -22,10 +22,15 @@ class TestTranspiler(unittest.TestCase):
         self.assertIn("return n *2", codigo_py)
 
     def test_bloqueio_atribuicao_palavra_chave_estrutural(self):
-        with self.assertRaises(ErroDeTraducao) as ctx:
-            transpila("para = 10")
-        self.assertIn("palavra reservada", str(ctx.exception))
-        self.assertIn("para", str(ctx.exception))
+        for codigo in ("para = 10", "para += 1", "para: inteiro = 1", "para, valor = (1, 2)"):
+            with self.subTest(codigo=codigo), self.assertRaises(ErroDeTraducao) as ctx:
+                transpila(codigo)
+            self.assertIn("palavra reservada", str(ctx.exception))
+            self.assertIn("para", str(ctx.exception))
+
+    def test_erro_de_tokenizacao(self):
+        with self.assertRaises(ErroDeTraducao):
+            transpila('mostre("texto sem fechar\n')
 
     def test_atribuicao_variavel_com_nome_builtin(self):
         """Valida que 'lista = [1, 2, 3]' é permitida normalmente (ADR-001)."""

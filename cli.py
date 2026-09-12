@@ -4,8 +4,14 @@ import sys
 
 from transpilador_pt.executor import executa_arquivo
 
-if __name__ == "__main__":
+
+def main() -> int:
     if len(sys.argv) < 2:
-        print("Uso: python3 cli.py arquivo.ptpy [--mostrar-python]")
-        sys.exit(1)
-    executa_arquivo(sys.argv[1], mostrar_python="--mostrar-python" in sys.argv)
+        print("Uso: python3 cli.py arquivo.ptpy [--mostrar-python]", file=sys.stderr)
+        return 1
+
+    return executa_arquivo(sys.argv[1], mostrar_python="--mostrar-python" in sys.argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

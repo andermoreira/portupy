@@ -40,6 +40,18 @@ class TestErros(unittest.TestCase):
             self.assertIn("Erro de escrita no código", mensagem)
             self.assertNotIn("ainda sem tradução", mensagem)
 
+    def test_formata_erro_mapeia_coluna_do_codigo_traduzido(self):
+        try:
+            compile("if x \n    mostre (1 )\n", "<codigo_pt>", "exec")
+        except SyntaxError as exc:
+            mensagem = formata_erro_amigavel(
+                exc,
+                ["se x", "    mostre(1)"],
+                ["if x ", "    mostre (1 )"],
+            )
+            linhas = mensagem.splitlines()
+            self.assertEqual(linhas[1].index("se x") + len("se x"), linhas[2].index("^"))
+
     def test_formata_erro_indentation_error(self):
         """Valida que IndentationError exibe a linha e explicação sobre recuo."""
         try:

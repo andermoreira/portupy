@@ -15,7 +15,7 @@ transpilador_pt/
     ├── ola.ptpy
     └── erro.ptpy
 adr/                # Architecture Decision Records (ex.: ADR 001)
-specs/              # especificações ativas e passos de implementação (specs/steps/)
+specs/              # especificações arquivadas e passos de implementação
 tests/              # suíte de testes automatizados (unittest)
 cli.py              # python3 cli.py arquivo.ptpy [--mostrar-python]
 ```
@@ -31,6 +31,8 @@ python3 cli.py transpilador_pt/exemplos/ola.ptpy --mostrar-python   # ver o Pyth
 # Executar a suíte de testes automatizados
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
+
+A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou no arquivo informado.
 
 ## O que já funciona
 
@@ -54,4 +56,3 @@ python3 -m unittest discover -s tests -p "test_*.py"
 1. **Fase 2:** Implementar suporte sintático a `senao se` (`elif`) e `nao eh` (`is not`).
 2. **Fase 3:** Implementar o modo de transição bilíngue (`--modo-transicao`) e comando de exportação para `.py` limpo.
 3. **Fase 4:** Empacotar com **Pyodide** para execução 100% no navegador sem instalação local.
-

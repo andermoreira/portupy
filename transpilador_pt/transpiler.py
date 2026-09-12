@@ -23,6 +23,30 @@ class ErroDeTraducao(Exception):
     """Erro ao tentar transpilar o código-fonte em português."""
 
 
+ASSIGNMENT_OPERATORS = {
+    "=", ":=", "+=", "-=", "*=", "/=", "//=", "%=", "**=",
+    "<<=", ">>=", "&=", "|=", "^=", "@=",
+}
+
+
+def _has_assignment_until_statement_end(
+    tokens: list[tokenize.TokenInfo], start: int,
+) -> bool:
+    """Check whether an assignment operator appears before the statement ends."""
+    nesting = 0
+    for tok in tokens[start + 1:]:
+        if tok.type == token.OP:
+            if tok.string in "([{":
+                nesting += 1
+            elif tok.string in ")]}":
+                nesting = max(0, nesting - 1)
+            elif tok.string in ASSIGNMENT_OPERATORS:
+                return True
+        elif tok.type == token.NEWLINE and nesting == 0:
+            return False
+    return False
+
+
 def transpila(codigo_pt: str) -> str:
     """Converte código-fonte em português para código Python equivalente.
 
@@ -34,7 +58,7 @@ def transpila(codigo_pt: str) -> str:
 
     try:
         fluxo = list(tokenize.generate_tokens(leitor))
-    except tokenize.TokenizeError as exc:
+    except (tokenize.TokenError, IndentationError) as exc:
         raise ErroDeTraducao(f"Não consegui interpretar o código: {exc}") from exc
 
     for i, tok in enumerate(fluxo):
@@ -49,8 +73,7 @@ def transpila(codigo_pt: str) -> str:
             # Checagem amigável: usar uma palavra reservada como alvo de
             # atribuição ("para = 5") gera um SyntaxError confuso depois
             # da tradução. Detectamos aqui e explicamos o motivo real.
-            proximo = fluxo[i + 1] if i + 1 < len(fluxo) else None
-            if proximo and proximo.type == token.OP and proximo.string == "=":
+            if _has_assignment_until_statement_end(fluxo, i):
                 raise ErroDeTraducao(
                     f"linha {inicio[0]}: '{valor}' é uma palavra reservada nesta "
                     f"linguagem (equivale a '{MAPA[valor]}' em Python) e não pode "
