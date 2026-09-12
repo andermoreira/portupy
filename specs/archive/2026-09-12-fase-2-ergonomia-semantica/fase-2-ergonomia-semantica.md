@@ -34,7 +34,7 @@ Permitir a escrita natural de condicionais encadeadas (`senao se`) e operadores 
 ## Assumptions
 - A biblioteca padrão `tokenize` do Python preserva a linha e a ordem sequencial de tokens adjacentes na mesma linha [VERIFIED: Python 3.9.6 local].
 - A fusão de tokens (`senao` + `se` -> `elif`) na mesma linha preserva a correspondência 1:1 de números de linha para o formatador de tracebacks [ADR-002].
-- `==` é semanticamente idêntico a `is` para literais numéricos e strings na intenção do estudante iniciante, com a vantagem de não depender de string interning [ADR-002].
+- A intenção pedagógica de `eh` para literais numéricos e strings é igualdade por valor; por isso a implementação gera `==`, sem depender de identidade ou de string interning [ADR-002].
 
 ## Risks
 - **Desalinhamento de colunas em erros:** A fusão de dois tokens (`senao se` tem 8 caracteres, `elif` tem 4) pode alterar o offset de tokens posteriores na mesma linha.

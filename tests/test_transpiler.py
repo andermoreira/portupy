@@ -76,6 +76,21 @@ class TestTranspiler(unittest.TestCase):
         self.assertIn("x not in lista", transpila("se x nao em lista:\n    pass"))
         self.assertIn("x not in lista", transpila("se x não em lista:\n    pass"))
 
+    def test_atribuicoes_aninhadas_nao_sao_confundidas_com_palavras_reservadas(self):
+        """Permite defaults e argumentos nomeados dentro de estruturas traduzidas."""
+        codigo_funcao = transpila("funcao saudacao(nome=\"mundo\"):\n    retorne nome\n")
+        self.assertIn("def saudacao", codigo_funcao)
+
+        codigo_condicional = transpila(
+            "se valida(valor=1):\n    passe\n"
+            "senao se valida(valor=2):\n    passe\n"
+        )
+        self.assertIn("if valida", codigo_condicional)
+        self.assertIn("elif valida", codigo_condicional)
+
+        codigo_comparacao = transpila("se valor eh valida(alvo=1):\n    passe\n")
+        self.assertIn("valor ==", codigo_comparacao)
+
 
 if __name__ == "__main__":
     unittest.main()

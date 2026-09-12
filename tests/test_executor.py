@@ -117,6 +117,22 @@ class TestExecutor(unittest.TestCase):
         self.assertIn("v eh nulo", f.getvalue())
         self.assertIn("3 nao em itens", f.getvalue())
 
+    def test_executa_codigo_com_defaults_e_argumentos_nomeados(self):
+        """Valida defaults e argumentos nomeados em estruturas traduzidas."""
+        codigo = (
+            "funcao valida(valor=1):\n"
+            "    retorne valor\n"
+            "se valida(valor=1) eh 1:\n"
+            "    mostre('funciona')\n"
+            "senao se valida(valor=2) eh 2:\n"
+            "    mostre('falhou')\n"
+        )
+        f = io.StringIO()
+        with contextlib.redirect_stdout(f):
+            status = executa_codigo(codigo)
+        self.assertEqual(0, status)
+        self.assertEqual("funciona\n", f.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

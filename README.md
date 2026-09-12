@@ -16,7 +16,7 @@ transpilador_pt/
     ├── erro.ptpy
     └── condicionais.ptpy
 adr/                # Architecture Decision Records (ADR 001, ADR 002)
-specs/              # especificações ativas, arquivadas e passos de implementação
+specs/              # especificações arquivadas e passos de implementação
 tests/              # suíte de testes automatizados (unittest)
 cli.py              # python3 cli.py arquivo.ptpy [--mostrar-python]
 ```

@@ -40,7 +40,7 @@ def _has_assignment_until_statement_end(
                 nesting += 1
             elif tok.string in ")]}":
                 nesting = max(0, nesting - 1)
-            elif tok.string in ASSIGNMENT_OPERATORS:
+            elif tok.string in ASSIGNMENT_OPERATORS and nesting == 0:
                 return True
         elif tok.type == token.NEWLINE and nesting == 0:
             return False
