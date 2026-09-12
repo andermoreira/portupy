@@ -1,0 +1,11 @@
+funcao saudacao(nome):
+    se nome eh nulo:
+        retorne "sem nome"
+    senao:
+        retorne "Ola, " + nome
+
+nomes = ["Ana", "Bruno", "Carla"]
+para nome em nomes:
+    mostre(saudacao(nome))
+
+mostre(f"Total de nomes: {tamanho(nomes)}")

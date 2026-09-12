@@ -1,0 +1,2 @@
+lista_nums = [10, 20, 30]
+mostre(lista_nums[10])
