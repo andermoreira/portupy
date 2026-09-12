@@ -20,7 +20,9 @@ PALAVRAS_CHAVE = {
     "se": "if",
     "senao": "else",          # sem acento, teclado-friendly
     "senão": "else",
-    "ouse": "elif",           # "ou se" grudado
+    "senaose": "elif",
+    "senãose": "elif",
+    "ouse": "elif",           # legado / retrocompatibilidade
     "para": "for",
     "enquanto": "while",
     "funcao": "def",
@@ -43,8 +45,6 @@ PALAVRAS_CHAVE = {
     "não": "not",
     "e": "and",
     "ou": "or",
-    "eh": "is",
-    "é": "is",
     "lambda": "lambda",
     "global": "global",
     "assincrono": "async",

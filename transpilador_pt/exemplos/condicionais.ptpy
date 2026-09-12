@@ -1,0 +1,25 @@
+# Exemplo demonstrativo de condicionais e operadores da Fase 2
+
+funcao classificar_nota(nota):
+    se nota eh nulo:
+        retorne "Nota ausente"
+    senao se nota eh 10:
+        retorne "Excelente (gabaritou!)"
+    senao se nota >= 7:
+        retorne "Aprovado"
+    senao:
+        retorne "Em recuperacao"
+
+notas = [10, 8.5, 4.0, nulo]
+para valor em notas:
+    mostre(f"Nota: {valor} -> {classificar_nota(valor)}")
+
+# Testando operadores compostos de pertinência e negação
+bloqueados = ["Bruno", "Carlos"]
+usuario = "Ana"
+
+se usuario nao em bloqueados:
+    mostre(f"Acesso liberado para: {usuario}")
+
+se usuario nao eh "Bruno":
+    mostre("Confirmado: usuario nao eh o Bruno")

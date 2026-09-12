@@ -49,6 +49,33 @@ class TestTranspiler(unittest.TestCase):
         self.assertIn("self.tipo=tipo", codigo_classe.replace(" ", ""))
         self.assertIn("self.se=10", codigo_classe.replace(" ", ""))
 
+    def test_traducao_ouse_retrocompatibilidade(self):
+        """Valida que 'ouse' continua transpilando para 'elif' por compatibilidade."""
+        codigo_py = transpila("se x:\n    pass\nouse y:\n    pass\n")
+        self.assertIn("elif y :", codigo_py)
+
+    def test_traducao_senao_se_e_variacoes(self):
+        """Valida suporte a 'senao se', 'senão se', 'senaose' e 'senãose' -> 'elif'."""
+        for trecho in ("senao se x > 0:", "senão se x > 0:", "senaose x > 0:", "senãose x > 0:"):
+            with self.subTest(trecho=trecho):
+                codigo_py = transpila(f"se x == 0:\n    pass\n{trecho}\n    pass\n")
+                self.assertIn("elif x >0 :", codigo_py.replace(" > ", ">"))
+
+    def test_traducao_eh_contextual(self):
+        """Valida que 'eh'/'é' vira 'is' para nulo/booleanos e '==' para literais/valores."""
+        self.assertIn("x is None", transpila("se x eh nulo:\n    pass"))
+        self.assertIn("x is None", transpila("se x é nulo:\n    pass"))
+        self.assertIn("x==10", transpila("se x eh 10:\n    pass").replace(" ", ""))
+        self.assertIn('nome=="Ana"', transpila('se nome eh "Ana":\n    pass').replace(" ", ""))
+
+    def test_traducao_nao_eh_e_nao_em(self):
+        """Valida 'nao eh' -> 'is not' (nulo) ou '!=' e 'nao em' -> 'not in'."""
+        self.assertIn("x is not None", transpila("se x nao eh nulo:\n    pass"))
+        self.assertIn("x is not None", transpila("se x não é nulo:\n    pass"))
+        self.assertIn("x!=10", transpila("se x nao eh 10:\n    pass").replace(" ", ""))
+        self.assertIn("x not in lista", transpila("se x nao em lista:\n    pass"))
+        self.assertIn("x not in lista", transpila("se x não em lista:\n    pass"))
+
 
 if __name__ == "__main__":
     unittest.main()

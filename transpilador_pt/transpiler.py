@@ -47,6 +47,9 @@ def _has_assignment_until_statement_end(
     return False
 
 
+SINGLETONS_DE_IDENTIDADE = {"nulo", "None", "verdadeiro", "falso", "True", "False"}
+
+
 def transpila(codigo_pt: str) -> str:
     """Converte código-fonte em português para código Python equivalente.
 
@@ -61,7 +64,11 @@ def transpila(codigo_pt: str) -> str:
     except (tokenize.TokenError, IndentationError) as exc:
         raise ErroDeTraducao(f"Não consegui interpretar o código: {exc}") from exc
 
-    for i, tok in enumerate(fluxo):
+    i = 0
+    n = len(fluxo)
+
+    while i < n:
+        tok = fluxo[i]
         tipo, valor, inicio, fim, linha = tok
 
         # Se for precedido por '.', é acesso ou definição de atributo (ex.: obj.se, self.tipo = 1)
@@ -69,20 +76,78 @@ def transpila(codigo_pt: str) -> str:
         anterior = fluxo[i - 1] if i > 0 else None
         eh_atributo = anterior is not None and anterior.type == token.OP and anterior.string == "."
 
-        if tipo == token.NAME and valor in MAPA and not eh_atributo:
-            # Checagem amigável: usar uma palavra reservada como alvo de
-            # atribuição ("para = 5") gera um SyntaxError confuso depois
-            # da tradução. Detectamos aqui e explicamos o motivo real.
-            if _has_assignment_until_statement_end(fluxo, i):
-                raise ErroDeTraducao(
-                    f"linha {inicio[0]}: '{valor}' é uma palavra reservada nesta "
-                    f"linguagem (equivale a '{MAPA[valor]}' em Python) e não pode "
-                    f"ser usada como nome de variável. Escolha outro nome, "
-                    f"ex.: '{valor}_valor'."
-                )
-            valor = MAPA[valor]
+        if tipo == token.NAME and not eh_atributo:
+            proximo = fluxo[i + 1] if i + 1 < n else None
+            proximo_2 = fluxo[i + 2] if i + 2 < n else None
+
+            # Reconhece "senao se" ou "senão se" na mesma linha e funde em "elif"
+            if (
+                valor in ("senao", "senão")
+                and proximo is not None
+                and proximo.type == token.NAME
+                and proximo.string == "se"
+                and proximo.start[0] == inicio[0]
+            ):
+                if _has_assignment_until_statement_end(fluxo, i):
+                    raise ErroDeTraducao(
+                        f"linha {inicio[0]}: '{valor} se' é uma palavra reservada nesta "
+                        f"linguagem (equivale a 'elif' em Python) e não pode "
+                        f"ser usada como nome de variável."
+                    )
+                tokens_saida.append((token.NAME, "elif"))
+                i += 2
+                continue
+
+            # Reconhece negação composta "nao eh" ou "não é" na mesma linha
+            if (
+                valor in ("nao", "não")
+                and proximo is not None
+                and proximo.type == token.NAME
+                and proximo.string in ("eh", "é")
+                and proximo.start[0] == inicio[0]
+            ):
+                if _has_assignment_until_statement_end(fluxo, i):
+                    raise ErroDeTraducao(
+                        f"linha {inicio[0]}: '{valor} {proximo.string}' é uma expressão reservada nesta "
+                        f"linguagem e não pode ser usada como nome de variável."
+                    )
+                if proximo_2 is not None and proximo_2.string in SINGLETONS_DE_IDENTIDADE:
+                    tokens_saida.append((token.NAME, "is"))
+                    tokens_saida.append((token.NAME, "not"))
+                else:
+                    tokens_saida.append((token.OP, "!="))
+                i += 2
+                continue
+
+            # Resolução contextual de "eh" e "é" (ADR-002)
+            if valor in ("eh", "é"):
+                if _has_assignment_until_statement_end(fluxo, i):
+                    raise ErroDeTraducao(
+                        f"linha {inicio[0]}: '{valor}' é uma palavra reservada nesta "
+                        f"linguagem e não pode ser usada como nome de variável."
+                    )
+                if proximo is not None and proximo.string in SINGLETONS_DE_IDENTIDADE:
+                    tokens_saida.append((token.NAME, "is"))
+                else:
+                    tokens_saida.append((token.OP, "=="))
+                i += 1
+                continue
+
+            if valor in MAPA:
+                # Checagem amigável: usar uma palavra reservada como alvo de
+                # atribuição ("para = 5") gera um SyntaxError confuso depois
+                # da tradução. Detectamos aqui e explicamos o motivo real.
+                if _has_assignment_until_statement_end(fluxo, i):
+                    raise ErroDeTraducao(
+                        f"linha {inicio[0]}: '{valor}' é uma palavra reservada nesta "
+                        f"linguagem (equivale a '{MAPA[valor]}' em Python) e não pode "
+                        f"ser usada como nome de variável. Escolha outro nome, "
+                        f"ex.: '{valor}_valor'."
+                    )
+                valor = MAPA[valor]
 
         tokens_saida.append((tipo, valor))
+        i += 1
 
     try:
         return tokenize.untokenize(tokens_saida)
@@ -92,5 +157,5 @@ def transpila(codigo_pt: str) -> str:
 
 def palavra_e_reservada_em_pt(nome: str) -> bool:
     """Útil para avisar o usuário se ele tentar nomear uma variável
-    com uma palavra que é reservada nesta camada (ex.: 'para', 'em')."""
-    return nome in MAPA or keyword.iskeyword(nome)
+    com uma palavra que é reservada nesta camada (ex.: 'para', 'em', 'eh')."""
+    return nome in MAPA or nome in ("eh", "é") or keyword.iskeyword(nome)
