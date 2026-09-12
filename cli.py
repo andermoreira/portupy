@@ -47,7 +47,7 @@ def main() -> int:
         try:
             with open(caminho_pt, "r", encoding="utf-8") as f:
                 codigo_pt = f.read()
-        except OSError as exc:
+        except (OSError, UnicodeError) as exc:
             print(f"Não consegui ler o arquivo: {exc}", file=sys.stderr)
             return 1
 
@@ -78,7 +78,7 @@ def main() -> int:
             codigo_py = transpila_canonico(codigo_pt)
             print(renderiza_lado_a_lado(codigo_pt, codigo_py))
             print()
-        except OSError as exc:
+        except (OSError, UnicodeError) as exc:
             print(f"Não consegui ler o arquivo: {exc}", file=sys.stderr)
             return 1
         except ErroDeTraducao as exc:

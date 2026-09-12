@@ -19,6 +19,37 @@ def _trunca(texto: str, largura: int) -> str:
     return texto[: largura - 1] + "…"
 
 
+def _renderiza_empilhado(
+    codigo_pt: str,
+    codigo_py: str,
+    largura_terminal: int,
+) -> str:
+    """Renderiza cada idioma em sua própria seção em terminais estreitos."""
+    largura = max(1, largura_terminal)
+    linhas_pt = codigo_pt.splitlines()
+    linhas_py = codigo_py.splitlines()
+    total_linhas = max(len(linhas_pt), len(linhas_py), 1)
+    largura_num = max(1, len(str(total_linhas)))
+
+    def renderiza_secao(titulo: str, linhas: list[str]) -> list[str]:
+        resultado = [_trunca(titulo, largura)]
+        for idx, linha in enumerate(linhas, start=1):
+            prefixo = f"{idx:>{largura_num}} │ "
+            resultado.append(
+                _trunca(
+                    prefixo + _trunca(linha, max(1, largura - len(prefixo))),
+                    largura,
+                )
+            )
+        return resultado
+
+    aviso = "Aviso: terminal estreito; colunas empilhadas e linhas truncadas."
+    linhas_saida = [_trunca(aviso, largura)]
+    linhas_saida.extend(renderiza_secao("Código em Português", linhas_pt))
+    linhas_saida.extend(renderiza_secao("Python Canônico", linhas_py))
+    return "\n".join(linhas_saida)
+
+
 def renderiza_lado_a_lado(
     codigo_pt: str,
     codigo_py: str,
@@ -37,16 +68,19 @@ def renderiza_lado_a_lado(
     if largura_terminal is None:
         largura_terminal = shutil.get_terminal_size(fallback=(80, 24)).columns
 
-    largura_terminal = max(40, largura_terminal)
+    largura_terminal = max(1, largura_terminal)
+    if largura_terminal < 60:
+        return _renderiza_empilhado(codigo_pt, codigo_py, largura_terminal)
 
     linhas_pt = codigo_pt.splitlines()
     linhas_py = codigo_py.splitlines()
     total_linhas = max(len(linhas_pt), len(linhas_py), 1)
 
     largura_num = max(3, len(str(total_linhas)))
+    largura_col_num = max(largura_num, len("Linha"))
     # Formato de cada linha: ' {num} │ {pt} │ {py}'
-    # Espaço consumido por margens e separadores: 1 + largura_num + 3 + 3 = largura_num + 7
-    largura_fixa = largura_num + 7
+    # Espaço consumido por margens e separadores: largura_col_num + 7.
+    largura_fixa = largura_col_num + 7
     espaco_colunas = max(20, largura_terminal - largura_fixa)
     largura_col_pt = espaco_colunas // 2
     largura_col_py = espaco_colunas - largura_col_pt
@@ -55,12 +89,12 @@ def renderiza_lado_a_lado(
     titulo_pt = "Código em Português" if largura_col_pt >= 20 else "Português"
     titulo_py = "Python Canônico" if largura_col_py >= 16 else "Python"
 
-    cabecalho_num = f"{'Lin':>{largura_num}}"
+    cabecalho_num = f"{'Linha':>{largura_col_num}}"
     cabecalho_pt = f"{titulo_pt:<{largura_col_pt}}"
     cabecalho_py = f"{titulo_py:<{largura_col_py}}"
 
     cabecalho = f" {cabecalho_num} │ {cabecalho_pt} │ {cabecalho_py}"
-    divisor = f"{'─' * (largura_num + 2)}┼{'─' * (largura_col_pt + 2)}┼{'─' * (largura_col_py + 2)}"
+    divisor = f"{'─' * (largura_col_num + 2)}┼{'─' * (largura_col_pt + 2)}┼{'─' * (largura_col_py + 1)}"
 
     linhas_saida = [cabecalho, divisor]
 
@@ -68,7 +102,7 @@ def renderiza_lado_a_lado(
         itertools.zip_longest(linhas_pt, linhas_py, fillvalue=""),
         start=1,
     ):
-        num_str = f"{idx:>{largura_num}}"
+        num_str = f"{idx:>{largura_col_num}}"
         col_pt = _trunca(l_pt, largura_col_pt)
         col_py = _trunca(l_py, largura_col_py)
         linha_formatada = (

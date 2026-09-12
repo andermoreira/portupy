@@ -1,6 +1,7 @@
 import contextlib
 import io
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -59,6 +60,15 @@ class TestCLI(unittest.TestCase):
         self.assertIn("print", conteudo)
         self.assertIn("'ola mundo'", conteudo)
 
+        processo = subprocess.run(
+            [sys.executable, destino],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(0, processo.returncode)
+        self.assertEqual("ola mundo\n", processo.stdout)
+
 
 
     def test_cli_exportar_destino_invalido_retorna_erro_amigavel(self):
@@ -69,6 +79,24 @@ class TestCLI(unittest.TestCase):
             status = cli.main()
         self.assertEqual(1, status)
         self.assertIn("Não consegui salvar o arquivo exportado", stderr.getvalue())
+
+    def test_cli_exportar_arquivo_com_encoding_invalido_retorna_erro_amigavel(self):
+        """CLI não despeja traceback quando o arquivo não é UTF-8 válido."""
+        caminho_invalido = os.path.join(self.temp_dir.name, "invalido.ptpy")
+        with open(caminho_invalido, "wb") as f:
+            f.write(b"mostre('\xff')\n")
+
+        stderr = io.StringIO()
+        with patch.object(
+            sys,
+            "argv",
+            ["cli.py", caminho_invalido, "--exportar"],
+        ), contextlib.redirect_stderr(stderr):
+            status = cli.main()
+
+        self.assertEqual(1, status)
+        self.assertIn("Não consegui ler o arquivo", stderr.getvalue())
+        self.assertNotIn("Traceback", stderr.getvalue())
 
     def test_cli_modo_lado_a_lado(self):
         """CLI com --lado-a-lado exibe visualização comparativa antes da execução (AC-05)."""

@@ -141,8 +141,71 @@ class TestTranspiler(unittest.TestCase):
         exec(codigo_py, {}, ns)
         self.assertEqual("ok", ns.get("resultado"))
 
+    def test_transpila_canonico_preserva_sombreamento_de_builtin(self):
+        """Valida que uma função do aluno mantém o nome mesmo se colidir com builtin."""
+        codigo_pt = (
+            "funcao mostre(valor):\n"
+            "    retorne valor + 1\n"
+            "resultado = mostre(1)\n"
+        )
+
+        codigo_py = transpila_canonico(codigo_pt)
+        ns = {}
+        exec(codigo_py, {}, ns)
+
+        self.assertEqual(2, ns.get("resultado"))
+        self.assertIn("resultado=mostre", codigo_py.replace(" ", ""))
+        self.assertNotIn("resultado=print", codigo_py.replace(" ", ""))
+
+    def test_transpila_canonico_preserva_parametro_sombreado_em_chamada_nomeada(self):
+        """Valida que parâmetros builtin não são renomeados no cabeçalho."""
+        codigo_pt = (
+            "funcao aplicar(mostre):\n"
+            "    retorne mostre\n"
+            "resultado = aplicar(mostre=5)\n"
+        )
+
+        codigo_py = transpila_canonico(codigo_pt)
+        ns = {}
+        exec(codigo_py, {}, ns)
+
+        self.assertEqual(5, ns.get("resultado"))
+
+    def test_transpila_canonico_preserva_sombreamento_de_builtin_em_fstring(self):
+        """Valida que expressões de f-string respeitam o escopo da função."""
+        codigo_pt = (
+            "funcao rotulo(tamanho):\n"
+            "    retorne f'valor: {tamanho}'\n"
+            "resultado = rotulo('ok')\n"
+        )
+
+        codigo_py = transpila_canonico(codigo_pt)
+        ns = {}
+        exec(codigo_py, {}, ns)
+
+        self.assertEqual("valor: ok", ns.get("resultado"))
+
+    def test_transpila_canonico_preserva_sombreamento_em_lambda_e_compreensao(self):
+        """Valida que escopos implícitos também preservam nomes locais."""
+        casos = (
+            (
+                "resultado = (lambda tamanho: tamanho(1))(lambda x: x + 1)\n",
+                2,
+            ),
+            (
+                "resultado = [tamanho(1) for tamanho in [lambda x: x + 1]]\n",
+                [2],
+            ),
+        )
+
+        for codigo_pt, esperado in casos:
+            with self.subTest(codigo_pt=codigo_pt):
+                codigo_py = transpila_canonico(codigo_pt)
+                ns = {}
+                exec(codigo_py, {}, ns)
+                self.assertEqual(esperado, ns.get("resultado"))
+
 
 
 if __name__ == "__main__":
     unittest.main()
-
