@@ -15,6 +15,8 @@ ficam indisponíveis como nomes de variável, exatamente como "in",
 inerente a essa abordagem, não um bug.
 """
 
+import builtins
+
 # --- Palavras-chave estruturais -------------------------------------------
 PALAVRAS_CHAVE = {
     "se": "if",
@@ -57,42 +59,13 @@ PALAVRAS_CHAVE = {
     "nulo": "None",
 }
 
-# --- Builtins curados injetados em runtime (ADR-001) ------------------------
-BUILTINS_PT = {
-    "mostre": print,
-    "mostra": print,
-    "leia": input,
-    "tamanho": len,
-    "intervalo": range,
-    "tipo": type,
-    "texto": str,
-    "inteiro": int,
-    "decimal": float,
-    "booleano": bool,
-    "lista": list,
-    "dicionario": dict,
-    "dicionário": dict,
-    "conjunto": set,
-    "tupla": tuple,
-    "ordene": sorted,
-    "inverta": reversed,
-    "some": sum,
-    "maximo": max,
-    "máximo": max,
-    "minimo": min,
-    "mínimo": min,
-    "absoluto": abs,
-    "arredonde": round,
-    "enumere": enumerate,
-    "zip": zip,
-    "mapeie": map,
-    "filtre": filter,
-}
-
 # MAPA utilizado pelo transpilador léxico para alterar tokens sintáticos
 MAPA = PALAVRAS_CHAVE
 
-# Mapeamento de builtins pedagógicos para nomes canônicos do Python (ADR-003)
+# --- Builtins curados (fonte única) -----------------------------------------
+# Mapeia o nome pedagógico em português para o nome canônico do builtin Python.
+# Esta é a única fonte de verdade: tanto a injeção em runtime (ADR-001) quanto a
+# exportação canônica (ADR-003) são derivadas daqui, evitando dessincronização.
 BUILTINS_CANONICOS = {
     "mostre": "print",
     "mostra": "print",
@@ -122,5 +95,12 @@ BUILTINS_CANONICOS = {
     "zip": "zip",
     "mapeie": "map",
     "filtre": "filter",
+}
+
+# Builtins injetados em runtime (ADR-001), derivados da fonte única acima
+# resolvendo cada nome canônico para o objeto builtin correspondente.
+BUILTINS_PT = {
+    nome_pt: getattr(builtins, nome_canonico)
+    for nome_pt, nome_canonico in BUILTINS_CANONICOS.items()
 }
 

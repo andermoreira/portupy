@@ -66,6 +66,17 @@ class TestContratoDeLinguagem(unittest.TestCase):
                 codigo = transpila_canonico(f"resultado = {nome_pt}(valor)\n")
                 self.assertIn(f"{nome_py}(valor)", codigo.replace(" ", ""))
 
+    def test_builtins_runtime_e_canonicos_permanecem_sincronizados(self):
+        """Garante que o objeto injetado em runtime é exatamente o builtin
+        nomeado na exportação canônica, prevenindo dessincronização entre
+        BUILTINS_PT e BUILTINS_CANONICOS (fonte única em dicionario.py)."""
+        import builtins
+
+        self.assertEqual(BUILTINS_PT.keys(), BUILTINS_CANONICOS.keys())
+        for nome_pt, nome_py in BUILTINS_CANONICOS.items():
+            with self.subTest(nome_pt=nome_pt):
+                self.assertIs(BUILTINS_PT[nome_pt], getattr(builtins, nome_py))
+
     def test_mapa_de_palavras_estruturais_tem_destinos_unicos(self):
         self.assertIn("se", PALAVRAS_CHAVE)
         self.assertEqual("elif", PALAVRAS_CHAVE["senaose"])
