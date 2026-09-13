@@ -29,6 +29,15 @@ class TestBundleWeb(unittest.TestCase):
             fonte_atual = (pasta_modulo / nome_arquivo).read_text(encoding="utf-8")
             self.assertEqual(fonte_atual, fontes_bundle[nome_arquivo])
 
+    def test_bundle_versionado_esta_atualizado(self):
+        """O artefato versionado deve ser exatamente o bundle que o gerador produz."""
+        pasta_projeto = Path(__file__).resolve().parent.parent
+        bundle_versionado = pasta_projeto / "web" / "bundle_pt.js"
+
+        with tempfile.TemporaryDirectory() as diretorio_temp:
+            bundle_gerado = gera_bundle_web(Path(diretorio_temp) / "bundle.js")
+            self.assertEqual(bundle_gerado.read_bytes(), bundle_versionado.read_bytes())
+
     def test_shell_web_referencia_arquivos_necessarios(self):
         """O HTML deve apontar para o runtime local e o Service Worker."""
         pasta_web = Path(__file__).resolve().parent.parent / "web"
@@ -46,6 +55,9 @@ class TestBundleWeb(unittest.TestCase):
 
         self.assertIn('id="syntax-highlight"', html)
         self.assertIn("atualizaSyntaxHighlight", app)
+        self.assertIn('id="btn-tentar-novamente"', html)
+        self.assertIn("copiaTexto", app)
+        self.assertIn("botoesAbas", app)
 
 
 if __name__ == "__main__":

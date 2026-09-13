@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run Python tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Verify generated bundle
+        run: |
+          python -m transpilador_pt.bundle_web
+          git diff --exit-code -- web/bundle_pt.js
+
+      - name: Validate JavaScript syntax
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check JavaScript files
+        run: |
+          node --check web/app.js
+          node --check web/pyodide-worker.js
+          node --check web/service-worker.js
+          node --check web/bundle_pt.js
+
+      - name: Check whitespace errors
+        run: git diff --check

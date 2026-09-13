@@ -1,5 +1,6 @@
 import unittest
 from transpilador_pt.transpiler import transpila, transpila_canonico, ErroDeTraducao
+from transpilador_pt.dicionario import BUILTINS_CANONICOS, BUILTINS_PT
 
 
 
@@ -204,6 +205,39 @@ class TestTranspiler(unittest.TestCase):
                 ns = {}
                 exec(codigo_py, {}, ns)
                 self.assertEqual(esperado, ns.get("resultado"))
+
+    def test_estruturas_de_controle_adicionais_geram_python_compilavel(self):
+        """Garante que classes e tratamento de exceções permaneçam parte do contrato."""
+        codigo_pt = (
+            "classe Pessoa:\n"
+            "    funcao __init__(self, nome):\n"
+            "        self.nome = nome\n"
+            "\n"
+            "funcao descreva(pessoa):\n"
+            "    tente:\n"
+            "        retorne pessoa.nome\n"
+            "    exceto AttributeError:\n"
+            "        retorne nulo\n"
+        )
+
+        codigo_py = transpila(codigo_pt)
+        compile(codigo_py, "<teste_transpilador>", "exec")
+        self.assertIn("class Pessoa", codigo_py)
+        self.assertIn("try", codigo_py)
+        self.assertIn("except AttributeError", codigo_py)
+
+    def test_identificadores_unicode_sao_preservados(self):
+        """Identificadores válidos em português devem continuar válidos no Python."""
+        codigo_py = transpila("ação = 2\nresultado = ação + 1\n")
+        namespace = {}
+
+        exec(codigo_py, {}, namespace)
+
+        self.assertEqual(3, namespace["resultado"])
+
+    def test_mapas_de_builtins_runtime_e_canonico_permanecem_sincronizados(self):
+        """Todo builtin disponível no runtime deve ter destino na exportação canônica."""
+        self.assertEqual(set(BUILTINS_PT), set(BUILTINS_CANONICOS))
 
 
 

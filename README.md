@@ -64,6 +64,11 @@ Depois de uma carga online completa, o Service Worker mantém o shell e os asset
 solicitados em cache; ao reabrir pelo mesmo endereço local, o Playground pode ser
 usado sem rede, desde que o navegador não tenha limpado esse cache.
 
+O modo offline, portanto, depende de um cache previamente preenchido: ele não
+promete funcionamento no primeiro acesso sem rede. Para executar arquivos `.ptpy`
+locais, a CLI usa `exec` no processo Python atual e não oferece sandbox; execute
+somente código confiável.
+
 A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou no arquivo informado.
 
 ## O que já funciona
@@ -87,6 +92,7 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 
 - **Apenas a gramática inicial e builtins curados são em português.** Bibliotecas externas (`requests`, `pandas`) continuam em inglês por design para servir de rampa de acesso, não de ecossistema isolado.
 - **Colisão de palavras estruturais.** `para`, `em`, `e`, `ou`, `com` são reservadas para a gramática, exatamente como `for`/`in`/`and`/`or`/`with` são em inglês.
+- **Execução local sem sandbox.** O executor da CLI é apropriado para scripts locais confiáveis, mas não deve ser usado para executar código de terceiros como se fosse um ambiente isolado.
 
 ## Roadmap
 

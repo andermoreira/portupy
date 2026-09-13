@@ -98,6 +98,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   const btnExecutar = document.getElementById('btn-executar');
   const btnLimpar = document.getElementById('btn-limpar');
   const btnCopiar = document.getElementById('btn-copiar-saida');
+  const btnTentarNovamente = document.getElementById('btn-tentar-novamente');
   
   const statusDot = document.getElementById('status-dot');
   const statusText = document.getElementById('status-text');
@@ -301,6 +302,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
       editor.selectionStart = editor.selectionEnd = start + 4;
       atualizaLinhas();
       atualizaCursorStats();
+      atualizaSyntaxHighlight();
     } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       if (!btnExecutar.disabled) {
@@ -321,6 +323,9 @@ mostre(f"Menor valor: {minimo(quadrados)}")
     tabBtnTerminal.setAttribute('aria-selected', nomeAba === 'terminal');
     tabBtnBilingue.setAttribute('aria-selected', nomeAba === 'bilingue');
     tabBtnCanonico.setAttribute('aria-selected', nomeAba === 'canonico');
+    tabBtnTerminal.tabIndex = nomeAba === 'terminal' ? 0 : -1;
+    tabBtnBilingue.tabIndex = nomeAba === 'bilingue' ? 0 : -1;
+    tabBtnCanonico.tabIndex = nomeAba === 'canonico' ? 0 : -1;
 
     // Atualiza painéis
     tabTerminal.hidden = (nomeAba !== 'terminal');
@@ -336,6 +341,47 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   tabBtnBilingue.addEventListener('click', () => ativaAba('bilingue'));
   tabBtnCanonico.addEventListener('click', () => ativaAba('canonico'));
 
+  const botoesAbas = [tabBtnTerminal, tabBtnBilingue, tabBtnCanonico];
+  botoesAbas.forEach((botao, indice) => {
+    botao.addEventListener('keydown', (event) => {
+      if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        return;
+      }
+      event.preventDefault();
+      let proximoIndice;
+      if (event.key === 'Home') {
+        proximoIndice = 0;
+      } else if (event.key === 'End') {
+        proximoIndice = botoesAbas.length - 1;
+      } else {
+        const deslocamento = ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1;
+        proximoIndice = (indice + deslocamento + botoesAbas.length) % botoesAbas.length;
+      }
+      botoesAbas[proximoIndice].focus();
+      botoesAbas[proximoIndice].click();
+    });
+  });
+
+  async function copiaTexto(texto) {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(texto);
+      return;
+    }
+
+    const areaTransferencia = document.createElement('textarea');
+    areaTransferencia.value = texto;
+    areaTransferencia.setAttribute('readonly', '');
+    areaTransferencia.style.position = 'fixed';
+    areaTransferencia.style.opacity = '0';
+    document.body.appendChild(areaTransferencia);
+    areaTransferencia.select();
+    const copiado = document.execCommand('copy');
+    areaTransferencia.remove();
+    if (!copiado) {
+      throw new Error('O navegador recusou o acesso à área de transferência.');
+    }
+  }
+
   // Botão Copiar Conteúdo
   btnCopiar.addEventListener('click', async () => {
     let texto = '';
@@ -349,7 +395,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
 
     if (texto) {
       try {
-        await navigator.clipboard.writeText(texto);
+        await copiaTexto(texto);
         const originalText = btnCopiar.innerHTML;
         btnCopiar.innerHTML = '<span>✓ Copiado!</span>';
         setTimeout(() => {
@@ -357,6 +403,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
         }, 2000);
       } catch (err) {
         console.error('Falha ao copiar:', err);
+        outputStatus.textContent = 'Status: Não foi possível copiar';
       }
     }
   });
@@ -464,6 +511,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
 
   async function inicializaPyodide({ executarInicial = true } = {}) {
     btnExecutar.disabled = true;
+    btnTentarNovamente.hidden = true;
     statusDot.className = 'status-dot status-loading';
     statusText.textContent = 'Baixando Python Wasm...';
 
@@ -475,6 +523,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
       statusDot.className = 'status-dot status-ready';
       statusText.textContent = 'Python Pronto (Wasm)';
       btnExecutar.disabled = false;
+      btnTentarNovamente.hidden = true;
 
       // Executa o exemplo inicial
       if (executarInicial) {
@@ -486,6 +535,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
       encerraWorker();
       statusDot.className = 'status-dot status-error';
       statusText.textContent = 'Falha ao carregar Python';
+      btnTentarNovamente.hidden = false;
       defineSaidaTerminal(
         'terminal-stderr',
         `⚠️ Não foi possível inicializar o ambiente Python no navegador.\n${err.message}\n\nVerifique sua conexão com a internet para carregar o runtime WebAssembly.`
@@ -592,6 +642,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   }
 
   btnExecutar.addEventListener('click', executaCodigo);
+  btnTentarNovamente.addEventListener('click', () => inicializaPyodide());
 
   // Inicializa com o exemplo 1
   editor.value = EXEMPLOS.ola;
