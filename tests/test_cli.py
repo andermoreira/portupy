@@ -155,6 +155,15 @@ class TestCLI(unittest.TestCase):
         mock_inicia.assert_called_once()
         self.assertEqual(9000, mock_inicia.call_args.kwargs.get("porta"))
 
+    def test_cli_web_sem_navegador(self):
+        """A CLI permite iniciar o playground em ambiente sem interface gráfica."""
+        with patch("cli.inicia_servidor_web") as mock_inicia:
+            with patch.object(sys, "argv", ["cli.py", "--web", "--sem-navegador"]):
+                status = cli.main()
+        self.assertEqual(0, status)
+        mock_inicia.assert_called_once()
+        self.assertFalse(mock_inicia.call_args.kwargs.get("abrir_navegador"))
+
     def test_cli_web_porta_invalida(self):
         """CLI com porta inválida exibe erro amigável em stderr e retorna 1 (AC-07)."""
         stderr = io.StringIO()
@@ -170,6 +179,14 @@ class TestCLI(unittest.TestCase):
             status = cli.main()
         self.assertEqual(1, status)
         self.assertIn("unrecognized arguments", stderr.getvalue())
+
+    def test_cli_sem_navegador_exige_modo_web(self):
+        """A opção operacional não deve ser aceita silenciosamente no modo de arquivo."""
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", ["cli.py", self.script_pt, "--sem-navegador"]), contextlib.redirect_stderr(stderr):
+            status = cli.main()
+        self.assertEqual(1, status)
+        self.assertIn("só pode ser usado com --web", stderr.getvalue())
 
 
 if __name__ == "__main__":

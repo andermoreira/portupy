@@ -54,6 +54,7 @@ python3 meu_script.py                                                      # rod
 # 4. Iniciar o Playground Web no navegador (100% client-side via Pyodide)
 python3 cli.py --web        # abre http://localhost:8000 automaticamente
 python3 cli.py --web 8080   # porta customizada opcional
+python3 cli.py --web --sem-navegador  # inicia sem abrir interface gráfica
 
 # 5. Ver o Python intermediário de compilação
 python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python

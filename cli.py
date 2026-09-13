@@ -3,7 +3,7 @@
 
 Uso:
     python3 cli.py arquivo.ptpy [--mostrar-python] [--lado-a-lado] [--exportar [destino.py]]
-    python3 cli.py --web [porta]
+    python3 cli.py --web [porta] [--sem-navegador]
 """
 
 from __future__ import annotations
@@ -57,6 +57,11 @@ def cria_parser() -> argparse.ArgumentParser:
         help="inicia o playground web na porta informada (padrão: 8000)",
     )
     parser.add_argument(
+        "--sem-navegador",
+        action="store_true",
+        help="não abre o navegador automaticamente ao iniciar o playground",
+    )
+    parser.add_argument(
         "--mostrar-python",
         action="store_true",
         help="mostra o código Python intermediário antes da execução",
@@ -106,13 +111,17 @@ def main(argv: list[str] | None = None) -> int:
             inicia_servidor_web(
                 diretorio_web,
                 porta=args.web,
-                abrir_navegador=True,
+                abrir_navegador=not args.sem_navegador,
                 bloquear=True,
             )
             return 0
         except Exception as exc:
             print(f"⚠️ Erro ao iniciar servidor web: {exc}", file=sys.stderr)
             return 1
+
+    if args.sem_navegador:
+        print("Erro: --sem-navegador só pode ser usado com --web.", file=sys.stderr)
+        return 1
 
     if args.arquivo is None:
         print("Erro: nenhum arquivo de entrada informado.", file=sys.stderr)

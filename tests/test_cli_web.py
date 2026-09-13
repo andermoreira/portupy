@@ -43,10 +43,20 @@ class TestServidorWeb(unittest.TestCase):
         finally:
             s.close()
 
+    def test_encontra_porta_disponivel_rejeita_tentativas_invalidas(self):
+        """A busca de portas exige pelo menos uma tentativa."""
+        with self.assertRaises(ValueError):
+            encontra_porta_disponivel(8880, max_tentativas=0)
+
     def test_cria_servidor_web_diretorio_inexistente(self):
         """Valida que levanta FileNotFoundError para diretório inválido."""
         with self.assertRaises(FileNotFoundError):
             cria_servidor_web("/diretorio/inexistente/transpilador_pt_nao_existe", porta=8900)
+
+    def test_cria_servidor_web_rejeita_porta_fora_do_intervalo(self):
+        """A criação do servidor aplica a mesma validação da busca de portas."""
+        with self.assertRaises(ValueError):
+            cria_servidor_web(self.path_temp, porta=65536)
 
     def test_cria_servidor_web_sucesso_e_requisicao_http(self):
         """Valida criação de servidor e resposta HTTP de arquivos estáticos."""
