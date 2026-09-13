@@ -89,4 +89,21 @@ jobs:
 
       - name: Verify packaged playground
         run: |
-          python -c "import glob, zipfile; wheel = glob.glob('$RUNNER_TEMP/wheel/*.whl')[0]; names = zipfile.ZipFile(wheel).namelist(); required = {'cli.py', 'web/index.html', 'web/vendor/pyodide/v0.26.4/full/pyodide.js', 'web/vendor/pyodide/v0.26.4/full/pyodide.asm.wasm'}; missing = required.difference(names); raise SystemExit(f'Missing package files: {sorted(missing)}') if missing else None"
+          python - <<'PY'
+          import glob
+          import os
+          import sys
+          import zipfile
+
+          wheel = glob.glob(os.path.join(os.environ["RUNNER_TEMP"], "wheel", "*.whl"))[0]
+          names = set(zipfile.ZipFile(wheel).namelist())
+          required = {
+              "cli.py",
+              "web/index.html",
+              "web/vendor/pyodide/v0.26.4/full/pyodide.js",
+              "web/vendor/pyodide/v0.26.4/full/pyodide.asm.wasm",
+          }
+          missing = sorted(required - names)
+          if missing:
+              sys.exit(f"Missing package files: {missing}")
+          PY
