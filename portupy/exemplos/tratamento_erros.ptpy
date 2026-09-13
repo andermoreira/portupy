@@ -1,0 +1,24 @@
+# Exemplo de 'tente/exceto': lidar com erros sem quebrar o programa
+
+funcao para_inteiro(texto):
+    tente:
+        retorne inteiro(texto)
+    exceto ValueError:
+        mostre(f"'{texto}' nao e um numero inteiro valido; usando 0.")
+        retorne 0
+
+entradas = ["42", "10", "abc", "7"]
+soma = 0
+para item em entradas:
+    soma = soma + para_inteiro(item)
+mostre(f"Soma dos valores validos: {soma}")
+
+# Divisao protegida contra divisao por zero
+funcao divide(a, b):
+    tente:
+        retorne a / b
+    exceto ZeroDivisionError:
+        retorne "indefinido (divisao por zero)"
+
+mostre(f"10 / 2 = {divide(10, 2)}")
+mostre(f"10 / 0 = {divide(10, 0)}")

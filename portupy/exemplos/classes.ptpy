@@ -1,0 +1,24 @@
+# Exemplo de classes (POO): definir um tipo com atributos e métodos
+
+classe Conta:
+    funcao __init__(self, dono, saldo=0):
+        self.dono = dono
+        self.saldo = saldo
+
+    funcao depositar(self, valor):
+        self.saldo = self.saldo + valor
+
+    funcao sacar(self, valor):
+        se valor > self.saldo:
+            mostre(f"Saldo insuficiente para sacar R$ {valor:.2f}")
+        senao:
+            self.saldo = self.saldo - valor
+
+    funcao resumo(self):
+        retorne f"{self.dono} tem R$ {self.saldo:.2f}"
+
+conta = Conta("Ana", 100)
+conta.depositar(50)
+conta.sacar(30)
+conta.sacar(1000)
+mostre(conta.resumo())
