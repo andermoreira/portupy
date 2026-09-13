@@ -104,3 +104,36 @@ BUILTINS_PT = {
     for nome_pt, nome_canonico in BUILTINS_CANONICOS.items()
 }
 
+# Singletons cujo destaque visual é distinto de palavras-chave comuns
+# (booleanos e nulo, em PT e em Python canônico).
+SINGLETONS_DESTAQUE = ("verdadeiro", "falso", "nulo", "True", "False", "None")
+
+
+def conjuntos_de_destaque() -> dict[str, list[str]]:
+    """Deriva os conjuntos de realce de sintaxe usados pelo playground web.
+
+    Fonte única para a coloração do editor: em vez de manter listas paralelas
+    à mão em ``app.js``, os grupos são gerados a partir dos mesmos dicionários
+    que governam a tradução (``PALAVRAS_CHAVE`` e ``BUILTINS_CANONICOS``),
+    cobrindo tanto os nomes em português quanto os equivalentes canônicos.
+    """
+    singletons = set(SINGLETONS_DESTAQUE)
+
+    palavras_chave = set()
+    for nome_pt, nome_py in PALAVRAS_CHAVE.items():
+        if nome_pt in singletons or nome_py in singletons:
+            continue
+        palavras_chave.add(nome_pt)
+        palavras_chave.add(nome_py)
+
+    builtins_destaque = set()
+    for nome_pt, nome_py in BUILTINS_CANONICOS.items():
+        builtins_destaque.add(nome_pt)
+        builtins_destaque.add(nome_py)
+
+    return {
+        "palavrasChave": sorted(palavras_chave),
+        "builtins": sorted(builtins_destaque),
+        "booleanos": sorted(singletons),
+    }
+

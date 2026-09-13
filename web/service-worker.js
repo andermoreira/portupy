@@ -1,4 +1,8 @@
-const CACHE_NAME = 'transpilador-pt-shell-v2';
+const CACHE_NAME = 'transpilador-pt-shell-v3';
+// Assets versionados e imutáveis (o caminho carrega a versão do Pyodide).
+// Servi-los cache-first evita rebaixar o runtime pesado (.wasm/.zip) a cada
+// reabertura online; só a rede é consultada quando ainda não estão em cache.
+const PREFIXO_IMUTAVEL = '/vendor/pyodide/';
 const PYODIDE_ASSETS = [
   './vendor/pyodide/v0.26.4/full/pyodide.js',
   './vendor/pyodide/v0.26.4/full/pyodide.asm.js',
@@ -37,6 +41,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+async function respondeComCachePrimeiro(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response.ok || response.type === 'opaque') {
+    await cache.put(request, response.clone());
+  }
+  return response;
+}
+
 async function respondeComRedePrimeiro(request) {
   const cache = await caches.open(CACHE_NAME);
   try {
@@ -57,8 +73,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
   const isLocalAsset = url.origin === self.location.origin;
+  if (!isLocalAsset) return;
 
-  if (isLocalAsset) {
+  // Runtime Pyodide é imutável por versão: cache-first para carregamento rápido
+  // e offline. O restante do shell segue network-first para receber updates.
+  if (url.pathname.includes(PREFIXO_IMUTAVEL)) {
+    event.respondWith(respondeComCachePrimeiro(event.request));
+  } else {
     event.respondWith(respondeComRedePrimeiro(event.request));
   }
 });

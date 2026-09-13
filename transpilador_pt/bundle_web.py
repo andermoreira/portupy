@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from .dicionario import conjuntos_de_destaque
+
 ARQUIVOS_MODULO = [
     "__init__.py",
     "dicionario.py",
@@ -48,12 +50,15 @@ def gera_bundle_web(caminho_saida: str | Path | None = None) -> Path:
         caminho_exemplo = PASTA_EXEMPLOS / nome_arquivo
         exemplos[Path(nome_arquivo).stem] = caminho_exemplo.read_text(encoding="utf-8")
 
+    destaque = conjuntos_de_destaque()
+
     caminho_saida.parent.mkdir(parents=True, exist_ok=True)
     conteudo_json = json.dumps(fontes, ensure_ascii=False, indent=2)
     conteudo_js = (
         "// Gerado automaticamente por transpilador_pt/bundle_web.py — não editar manualmente\n"
         f"window.TRANSPILADOR_PT_SOURCES = {conteudo_json};\n"
         f"window.TRANSPILADOR_PT_EXEMPLOS = {json.dumps(exemplos, ensure_ascii=False, indent=2)};\n"
+        f"window.TRANSPILADOR_PT_DESTAQUE = {json.dumps(destaque, ensure_ascii=False, indent=2)};\n"
     )
 
     caminho_saida.write_text(conteudo_js, encoding="utf-8")
