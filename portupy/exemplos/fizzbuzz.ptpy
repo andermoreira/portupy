@@ -1,0 +1,17 @@
+# FizzBuzz: o exercício clássico de introdução à programação.
+# Para cada número de 1 a 20:
+#   - múltiplo de 3 e 5  -> "FizzBuzz"
+#   - múltiplo de 3      -> "Fizz"
+#   - múltiplo de 5      -> "Buzz"
+#   - senão              -> o próprio número
+# O operador % (resto da divisão) diz se um número é divisível por outro.
+
+para numero em intervalo(1, 21):
+    se numero % 15 eh 0:
+        mostre("FizzBuzz")
+    senao se numero % 3 eh 0:
+        mostre("Fizz")
+    senao se numero % 5 eh 0:
+        mostre("Buzz")
+    senao:
+        mostre(numero)

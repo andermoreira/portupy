@@ -1,0 +1,19 @@
+# Trabalhando com textos (strings): fatiar, transformar e inspecionar.
+# Métodos de texto como .upper() e .split() continuam em inglês de propósito —
+# a ideia é servir de ponte para o Python real, não esconder o ecossistema.
+
+frase = "Ana gosta de Python"
+
+mostre(f"Texto original: {frase}")
+mostre(f"Em maiúsculas: {frase.upper()}")
+mostre(f"Quantidade de letras: {tamanho(frase)}")
+mostre(f"Palavras: {frase.split()}")
+mostre(f"Primeiras 3 letras: {frase[0:3]}")
+mostre(f"De trás para frente: {frase[::-1]}")
+
+# Um palíndromo é um texto igual de trás para frente.
+palavra = "arara"
+se palavra eh palavra[::-1]:
+    mostre(f"'{palavra}' é um palíndromo")
+senao:
+    mostre(f"'{palavra}' não é um palíndromo")
