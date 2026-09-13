@@ -12,6 +12,7 @@ from pathlib import Path
 ARQUIVOS_MODULO = [
     "__init__.py",
     "dicionario.py",
+    "escopo_canonico.py",
     "transpiler.py",
     "transicao.py",
     "erros.py",
