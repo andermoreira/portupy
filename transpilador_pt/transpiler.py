@@ -27,6 +27,11 @@ class ErroDeTraducao(Exception):
     """Erro ao tentar transpilar o código-fonte em português."""
 
 
+# FSTRING_MIDDLE só existe no Python 3.12+ (PEP 701). Nas versões anteriores a
+# f-string é um único token STRING, então usamos um sentinela que nunca casa.
+_FSTRING_MIDDLE = getattr(token, "FSTRING_MIDDLE", -1)
+
+
 ASSIGNMENT_OPERATORS = {
     "=", ":=", "+=", "-=", "*=", "/=", "//=", "%=", "**=",
     "<<=", ">>=", "&=", "|=", "^=", "@=",
@@ -36,14 +41,34 @@ ASSIGNMENT_OPERATORS = {
 def _has_assignment_until_statement_end(
     tokens: list[tokenize.TokenInfo], start: int,
 ) -> bool:
-    """Check whether an assignment operator appears before the statement ends."""
+    """Check whether an assignment operator appears before the statement ends.
+
+    No Python 3.12+ (PEP 701) o marcador de depuração de f-string ``f"{expr=}"``
+    aparece como um token ``OP '='`` no fluxo. Ele não é uma atribuição: é
+    seguido de ``}`` (ou de ``!`` de conversão / ``:`` de format spec). Ignorá-lo
+    evita tratar o builtin à esquerda como alvo de atribuição e deixá-lo sem
+    tradução na exportação canônica.
+    """
+    resto = tokens[start + 1:]
     nesting = 0
-    for tok in tokens[start + 1:]:
+    for pos, tok in enumerate(resto):
         if tok.type == token.OP:
             if tok.string in "([{":
                 nesting += 1
             elif tok.string in ")]}":
                 nesting = max(0, nesting - 1)
+            elif tok.string == "=" and nesting == 0:
+                # '=' de depuração de f-string: seguido de '}', '!' ou ':'.
+                # No 3.12+, o format spec após o '=' surge como FSTRING_MIDDLE.
+                proximo = resto[pos + 1] if pos + 1 < len(resto) else None
+                tipos_sufixo_debug = (token.OP, _FSTRING_MIDDLE)
+                if (
+                    proximo is not None
+                    and proximo.type in tipos_sufixo_debug
+                    and proximo.string[:1] in ("}", "!", ":")
+                ):
+                    continue
+                return True
             elif tok.string in ASSIGNMENT_OPERATORS and nesting == 0:
                 return True
         elif tok.type == token.NEWLINE and nesting == 0:
@@ -470,8 +495,11 @@ def _substitui_em_fstring(
             nivel_colch = 0
             em_aspas = None
             j = inicio
-            spec_format = ""
-            expr_bruta = ""
+            # Fim da expressão de código dentro do campo (antes de sufixos
+            # como o '=' de depuração, a conversão '!r' ou o format spec ':').
+            fim_expr = -1
+            # Sufixo preservado literalmente: '=' de depuração + '!conv' + ':spec'.
+            sufixo = ""
             while j < n:
                 ch = miolo[j]
                 if em_aspas:
@@ -497,18 +525,54 @@ def _substitui_em_fstring(
                         if nivel_chaves == 0 and nivel_paren == 0 and nivel_colch == 0:
                             break
                         nivel_chaves -= 1
-                    elif (ch == ":" or ch == "!") and nivel_chaves == 0 and nivel_paren == 0 and nivel_colch == 0:
-                        expr_bruta = miolo[inicio:j]
-                        k = j
-                        while k < n and miolo[k] != "}":
-                            k += 1
-                        spec_format = miolo[j:k]
-                        j = k
-                        break
+                    elif (
+                        nivel_chaves == 0
+                        and nivel_paren == 0
+                        and nivel_colch == 0
+                    ):
+                        # '=' de depuração (PEP: f"{expr=}"): um '=' isolado, não
+                        # parte de '==', '!=', '<=', '>=', ':='. Marca o fim da
+                        # expressão; tudo dali em diante é preservado literal.
+                        if (
+                            ch == "="
+                            and miolo[j + 1 : j + 2] != "="
+                            and miolo[j - 1 : j] not in ("=", "!", "<", ">", ":")
+                        ):
+                            fim_expr = j
+                            k = j
+                            while k < n and miolo[k] != "}":
+                                k += 1
+                            sufixo = miolo[j:k]
+                            j = k
+                            break
+                        # Conversão '!r'/'!s'/'!a', só quando seguida de '}' ou ':'
+                        # (evita confundir com o operador '!=').
+                        if (
+                            ch == "!"
+                            and miolo[j + 1 : j + 2] in ("r", "s", "a")
+                            and miolo[j + 2 : j + 3] in ("}", ":")
+                        ):
+                            fim_expr = j
+                            k = j
+                            while k < n and miolo[k] != "}":
+                                k += 1
+                            sufixo = miolo[j:k]
+                            j = k
+                            break
+                        # Início do format spec ':' no nível do campo.
+                        if ch == ":":
+                            fim_expr = j
+                            k = j
+                            while k < n and miolo[k] != "}":
+                                k += 1
+                            sufixo = miolo[j:k]
+                            j = k
+                            break
                 j += 1
 
-            if not spec_format:
-                expr_bruta = miolo[inicio:j]
+            if fim_expr == -1:
+                fim_expr = j
+            expr_bruta = miolo[inicio:fim_expr]
 
             try:
                 expr_traduzida = _transpila_core(
@@ -519,7 +583,7 @@ def _substitui_em_fstring(
             except Exception:
                 expr_traduzida = expr_bruta
 
-            resultado.append("{" + expr_traduzida + spec_format + "}")
+            resultado.append("{" + expr_traduzida + sufixo + "}")
             i = j + 1
         else:
             resultado.append(miolo[i])
