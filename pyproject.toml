@@ -38,9 +38,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/andermoreira/transpylar"
-Repository = "https://github.com/andermoreira/transpylar"
-Issues = "https://github.com/andermoreira/transpylar/issues"
+Homepage = "https://github.com/andermoreira/portupy"
+Repository = "https://github.com/andermoreira/portupy"
+Issues = "https://github.com/andermoreira/portupy/issues"
 
 [project.scripts]
 portupy = "cli:main"
