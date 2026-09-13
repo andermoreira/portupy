@@ -11,6 +11,11 @@ __pycache__/
 env/
 venv/
 
+# Python build artifacts
+build/
+dist/
+*.egg-info/
+
 # Playwright
 node_modules/
 playwright-report/

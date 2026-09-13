@@ -6,8 +6,12 @@
  * aplicação pode terminá-lo e criar outro quando o tempo limite for excedido.
  */
 
-const PYODIDE_SCRIPT = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js';
-const PYODIDE_INDEX_URL = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+const PYODIDE_ASSETS_ROOT = new URL(
+  './vendor/pyodide/v0.26.4/full/',
+  self.location.href
+).href;
+const PYODIDE_SCRIPT = `${PYODIDE_ASSETS_ROOT}pyodide.js`;
+const PYODIDE_INDEX_URL = PYODIDE_ASSETS_ROOT;
 
 let pyodideInstance = null;
 

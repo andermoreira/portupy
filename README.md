@@ -62,25 +62,34 @@ python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python
 # 6. Executar a suíte completa de testes automatizados
 python3 -m unittest discover -s tests -p "test_*.py"
 
-# 7. Consultar ajuda e versão da CLI
+# 7. Instalar o pacote e usar a CLI globalmente (opcional)
+python3 -m pip install .
+transpilador-pt transpilador_pt/exemplos/ola.ptpy
+transpilador-pt --web --sem-navegador
+
+# 8. Consultar ajuda e versão da CLI
 python3 cli.py --help
 python3 cli.py --version
 
-# 8. Executar os testes E2E do playground (requer Node.js e Chromium)
+# 9. Executar os testes E2E do playground (requer Node.js e Chromium)
 npm ci
 node_modules/.bin/playwright install chromium
 npm run test:e2e
 ```
 
-O primeiro acesso ao Playground precisa de internet para baixar o runtime Pyodide.
-Depois de uma carga online completa, o Service Worker mantém o shell e os assets
-solicitados em cache; ao reabrir pelo mesmo endereço local, o Playground pode ser
-usado sem rede, desde que o navegador não tenha limpado esse cache.
+O pacote inclui localmente o runtime Pyodide 0.26.4, o módulo Python padrão e os
+assets do playground. Por isso, depois que a página ou o servidor local estiverem
+disponíveis, a primeira execução pode ocorrer sem baixar o runtime de uma CDN. O
+Service Worker também mantém o shell e esses assets em cache para reaberturas
+offline. O acesso a um site ainda depende de o shell ter sido obtido por uma visita
+online anterior ou ser servido localmente pela CLI.
 
-O modo offline, portanto, depende de um cache previamente preenchido: ele não
-promete funcionamento no primeiro acesso sem rede. Para executar arquivos `.ptpy`
-locais, a CLI usa `exec` no processo Python atual e não oferece sandbox; execute
-somente código confiável.
+Os assets versionados e seus hashes estão em
+[`web/vendor/pyodide/manifest.json`](web/vendor/pyodide/manifest.json). A cópia é
+distribuída sob Apache-2.0, conforme [`web/vendor/pyodide/LICENSE.txt`](web/vendor/pyodide/LICENSE.txt).
+
+Para executar arquivos `.ptpy` locais, a CLI usa `exec` no processo Python atual e
+não oferece sandbox; execute somente código confiável.
 
 A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou no arquivo informado.
 
@@ -101,11 +110,15 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 - **Tradução didática de erros:** Cobertura de `SyntaxError`, `IndentationError`, `IndexError`, `NameError`, `ZeroDivisionError`, `TypeError`, `AttributeError`, `ValueError`, entre outros.
 - **Detecção antecipada de colisão:** Tentar atribuir a palavras-chave estruturais da sintaxe (`para = 5`, `se = 1`, `senao se = 2`) gera uma explicação amigável antes de disparar erro de sintaxe cru do interpretador.
 
+A superfície suportada está detalhada na [matriz de suporte da linguagem](docs/matriz-de-suporte.md),
+que também aponta os testes responsáveis por proteger cada grupo de construções.
+
 ## Limitações conhecidas (por design)
 
 - **Apenas a gramática inicial e builtins curados são em português.** Bibliotecas externas (`requests`, `pandas`) continuam em inglês por design para servir de rampa de acesso, não de ecossistema isolado.
 - **Colisão de palavras estruturais.** `para`, `em`, `e`, `ou`, `com` são reservadas para a gramática, exatamente como `for`/`in`/`and`/`or`/`with` são em inglês.
 - **Execução local sem sandbox.** O executor da CLI é apropriado para scripts locais confiáveis, mas não deve ser usado para executar código de terceiros como se fosse um ambiente isolado.
+- **Runtime Web versionado no pacote.** O primeiro carregamento do shell hospedado ainda precisa chegar ao navegador por uma conexão ou por um servidor local; o runtime Pyodide não é mais uma dependência de CDN em tempo de execução.
 
 ## Roadmap
 
@@ -113,3 +126,10 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 2. [x] **Fase 2:** Ergonomia semântica de condicionais (`senao se`, resolução contextual de `eh`/`é`, operadores `nao eh` e `nao em`).
 3. [x] **Fase 3:** Modo de transição bilíngue (`--lado-a-lado`) e exportador autônomo para Python canônico (`--exportar`).
 4. [x] **Fase 4:** Playground Web empacotado com **Pyodide** para experimentação direta no navegador sem instalação local.
+
+## Distribuição
+
+O `pyproject.toml` publica a CLI como `transpilador-pt` e inclui os exemplos, o
+playground estático e o runtime Pyodide local no wheel. A suíte de CI constrói esse
+artefato para verificar que uma instalação do pacote continua capaz de localizar o
+servidor web e seus assets.

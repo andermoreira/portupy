@@ -25,12 +25,12 @@ Como disponibilizar uma experiência interativa completa (edição, execução d
 ### B. Playground 100% Client-Side com Pyodide / WebAssembly (Escolhida)
 - **Pros:**
   - **Zero Backend / Custo Zero de Infraestrutura:** Pode ser hospedado como página estática no GitHub Pages, Vercel ou qualquer CDN estático.
-  - **Segurança Total (Sandboxed by Design):** O código do aluno roda exclusivamente dentro da sandbox WebAssembly do navegador do próprio usuário, sem risco de comprometer servidores externos.
-  - **Compatibilidade 100% com CPython:** O Pyodide é uma distribuição oficial do CPython para Wasm, o que garante paridade idêntica de comportamento com o ambiente local.
-  - **Funciona Offline:** Após o primeiro carregamento, o playground funciona sem conexão com a internet.
+  - **Isolamento no navegador:** O código do aluno roda dentro do Worker WebAssembly do navegador do próprio usuário; isso evita executar o código em uma infraestrutura compartilhada do projeto, sem transformar essa fronteira em uma garantia de segurança absoluta.
+  - **Base CPython via Pyodide:** O Pyodide fornece CPython compilado para Wasm, mas bibliotecas, APIs do navegador e limites de execução continuam sujeitos ao ambiente Web.
+  - **Runtime distribuído localmente:** O playground pode funcionar sem CDN porque os assets essenciais do Pyodide são versionados em `web/vendor/pyodide/` e precacheados pelo Service Worker.
   - **Fidelidade ao Pacote:** Como o `transpilador_pt` é Python puro (sem bibliotecas em C), ele pode ser carregado diretamente no virtual filesystem (`MEMFS`) do Pyodide.
 - **Cons:**
-  - Download inicial do runtime WebAssembly (~10 a 15 MB na primeira visita, cacheado em seguida).
+  - O carregamento inicial do runtime WebAssembly ainda transfere alguns megabytes de assets locais do site ou do servidor da CLI.
 
 ## Decision
 
@@ -40,8 +40,9 @@ Adotamos a **Alternativa B (Playground 100% Client-Side com Pyodide)**:
    - Criar diretório `web/` com HTML5 semântico, Vanilla CSS moderno e JavaScript modular (ES6).
    - Sem frameworks pesados ou ferramentas de build complexas, mantendo o projeto leve, rápido e fácil de servir localmente ou no GitHub Pages.
 2. **Carregamento do Transpilador no Pyodide:**
-   - O runtime Pyodide é carregado via CDN oficial (`pyodide.js`).
-   - Os arquivos-fonte do `transpilador_pt` (`dicionario.py`, `transpiler.py`, `transicao.py`, `erros.py`, `executor.py`) são montados no sistema de arquivos virtual do Pyodide (`/home/pyodide/transpilador_pt/`) ou agrupados em um loader estático para disponibilidade offline/standalone.
+   - O runtime Pyodide 0.26.4 é distribuído localmente em `web/vendor/pyodide/`, com manifesto de hashes e aviso de licença.
+   - A aplicação usa o mesmo diretório local como `indexURL`, sem depender de rede para o runtime.
+   - Os arquivos-fonte do `transpilador_pt` (`dicionario.py`, `transpiler.py`, `transicao.py`, `erros.py`, `executor.py`) são montados no sistema de arquivos virtual do Pyodide (`/home/pyodide/transpilador_pt/`) a partir do bundle estático.
 3. **Fluxos de Interação na Interface:**
    - **Editor:** Área de edição com numeração de linhas, atalhos de teclado (`Ctrl+Enter` / `Cmd+Enter` para rodar) e seletor de exemplos integrados (`ola.ptpy`, `condicionais.ptpy`, etc.).
    - **Console / Terminal Virtual:** Captura de `stdout` e `stderr` com renderização limpa e indicação de status de execução.
@@ -54,14 +55,14 @@ Adotamos a **Alternativa B (Playground 100% Client-Side com Pyodide)**:
 
 - **Positive:**
   - Zero barreira de instalação para estudantes e professores.
-  - Custo zero de manutenção de servidores; segurança inerente do modelo Wasm client-side.
+  - Custo zero de manutenção de servidores; o modelo Wasm client-side reduz a superfície de execução no servidor.
   - Experiência visual moderna e atrativa com feedback imediato.
   - Sincronização direta com as regras consolidadas nas Fases 1, 2 e 3.
 - **Negative:**
-  - Tempo de espera de 2 a 3 segundos no primeiro carregamento do Pyodide (mitigado por indicador de progresso e cache do navegador).
+  - O carregamento inicial do runtime local ainda pode levar alguns segundos, conforme o dispositivo e o servidor que entrega os assets.
 - **Neutral / to monitor:**
   - Compatibilidade com dispositivos móveis (layout responsivo com alternância entre editor e console).
 
 ## Trade-offs
 
-Priorizamos segurança e custo zero de infraestrutura via WebAssembly no navegador em detrimento do tamanho do download inicial do runtime CPython.
+Priorizamos a execução no navegador e o custo zero de infraestrutura em detrimento do tamanho do download inicial do runtime CPython. A distribuição local elimina a dependência de CDN durante a execução, mas não transforma a CLI em um sandbox para arquivos não confiáveis.

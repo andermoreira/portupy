@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "transpilador-pt"
+dynamic = ["version"]
+description = "Transpilador Python-em-português com CLI e playground WebAssembly"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Transpilador PT contributors" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Education",
+]
+
+[project.scripts]
+transpilador-pt = "cli:main"
+
+[tool.setuptools]
+include-package-data = true
+py-modules = ["cli"]
+
+[tool.setuptools.dynamic]
+version = { attr = "transpilador_pt.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["transpilador_pt*", "web"]
+
+[tool.setuptools.package-data]
+transpilador_pt = ["exemplos/*.ptpy"]
+web = [
+  "*.html",
+  "*.css",
+  "*.js",
+  "vendor/pyodide/LICENSE.txt",
+  "vendor/pyodide/manifest.json",
+  "vendor/pyodide/v0.26.4/full/*.js",
+  "vendor/pyodide/v0.26.4/full/*.json",
+  "vendor/pyodide/v0.26.4/full/*.wasm",
+  "vendor/pyodide/v0.26.4/full/*.zip",
+]

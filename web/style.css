@@ -28,7 +28,7 @@
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
   
   /* Raios e Sombras */
@@ -59,6 +59,7 @@ html, body {
   font-size: 14px;
   line-height: 1.5;
   overflow: hidden;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -507,6 +508,7 @@ body {
 .tabs-nav {
   display: flex;
   gap: 4px;
+  min-width: 0;
 }
 
 .tab-btn {
@@ -662,9 +664,92 @@ body {
   
   .navbar {
     padding: 0 12px;
+    height: auto;
+    min-height: 60px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .nav-brand {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .brand-info {
+    min-width: 0;
+  }
+
+  .brand-title,
+  .brand-badge {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nav-actions {
+    gap: 8px;
+  }
+
+  .nav-center {
+    order: 3;
+    flex: 1 0 100%;
+  }
+
+  .selector-wrapper {
+    width: 100%;
+  }
+
+  .select-dropdown {
+    min-width: 0;
+    width: 100%;
+    text-overflow: ellipsis;
+  }
+
+  .tabs-nav {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .tab-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
   
   .selector-label {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-badge,
+  .btn-github,
+  .shortcut-key {
+    display: none;
+  }
+
+  .status-indicator {
+    padding: 6px 8px;
+  }
+
+  .status-text {
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .panel-header {
+    padding: 0 10px;
+  }
+
+  .panel-footer {
+    padding: 0 10px;
+  }
+
+  .hint-text {
     display: none;
   }
 }

@@ -1,4 +1,11 @@
-const CACHE_NAME = 'transpilador-pt-shell-v1';
+const CACHE_NAME = 'transpilador-pt-shell-v2';
+const PYODIDE_ASSETS = [
+  './vendor/pyodide/v0.26.4/full/pyodide.js',
+  './vendor/pyodide/v0.26.4/full/pyodide.asm.js',
+  './vendor/pyodide/v0.26.4/full/pyodide.asm.wasm',
+  './vendor/pyodide/v0.26.4/full/python_stdlib.zip',
+  './vendor/pyodide/v0.26.4/full/pyodide-lock.json'
+];
 const SHELL_ASSETS = [
   './',
   './index.html',
@@ -6,9 +13,9 @@ const SHELL_ASSETS = [
   './app.js',
   './bundle_pt.js',
   './pyodide-worker.js',
-  './service-worker.js'
+  './service-worker.js',
+  ...PYODIDE_ASSETS
 ];
-const PYODIDE_PREFIX = '/pyodide/v0.26.4/';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -61,15 +68,9 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
-  const isPyodideAsset = (
-    url.origin === 'https://cdn.jsdelivr.net' &&
-    url.pathname.startsWith(PYODIDE_PREFIX)
-  );
   const isLocalAsset = url.origin === self.location.origin;
 
-  if (isPyodideAsset) {
-    event.respondWith(respondeComCachePrimeiro(event.request));
-  } else if (isLocalAsset) {
+  if (isLocalAsset) {
     event.respondWith(respondeComRedePrimeiro(event.request));
   }
 });

@@ -457,7 +457,7 @@
       btnTentarNovamente.hidden = false;
       defineSaidaTerminal(
         'terminal-stderr',
-        `⚠️ Não foi possível inicializar o ambiente Python no navegador.\n${err.message}\n\nVerifique sua conexão com a internet para carregar o runtime WebAssembly.`
+        `⚠️ Não foi possível inicializar o ambiente Python no navegador.\n${err.message}\n\nOs assets locais do runtime WebAssembly podem estar ausentes ou incompletos.`
       );
     }
   }
