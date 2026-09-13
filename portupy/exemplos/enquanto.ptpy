@@ -1,0 +1,17 @@
+# Exemplo do laço 'enquanto' (while): repete enquanto a condição for verdadeira
+
+# Contagem regressiva
+contador = 5
+mostre("--- Contagem regressiva ---")
+enquanto contador > 0:
+    mostre(f"{contador}...")
+    contador = contador - 1
+mostre("Fim!")
+
+# Acumular até passar de um limite
+total = 0
+numero = 1
+enquanto total < 20:
+    total = total + numero
+    numero = numero + 1
+mostre(f"Somei 1, 2, 3... e parei quando o total ({total}) passou de 20.")

@@ -1,0 +1,16 @@
+# Sequência de Fibonacci: cada número é a soma dos dois anteriores
+# (0, 1, 1, 2, 3, 5, 8, ...). Um bom exemplo de "estado que evolui" num laço.
+
+funcao fibonacci(quantidade):
+    a = 0
+    b = 1
+    resultado = []
+    para _ em intervalo(quantidade):
+        resultado.append(a)
+        # atualiza os dois valores de uma vez: 'a' vira 'b', 'b' vira 'a + b'
+        a, b = b, a + b
+    retorne resultado
+
+sequencia = fibonacci(10)
+mostre(f"Os primeiros 10 números de Fibonacci: {sequencia}")
+mostre(f"A soma deles é: {some(sequencia)}")

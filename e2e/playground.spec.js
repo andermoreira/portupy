@@ -22,6 +22,12 @@ test('executa código em português e exibe o Python canônico', async ({ page }
   await page.getByRole('tab', { name: /Python Canônico/ }).click();
   await expect(page.locator('#canonico-output')).toContainText('print');
   await expect(page.locator('#canonico-output')).toContainText('teste E2E');
+
+  // A aba canônica também recebe realce de sintaxe (reaproveitado do editor).
+  const canonicoHtml = await page
+    .locator('#canonico-output')
+    .evaluate((el) => el.innerHTML);
+  expect(canonicoHtml).toContain('syntax-builtin'); // 'print'
 });
 
 test('mantém syntax highlight seguro e atualizado ao inserir Tab', async ({ page }) => {
@@ -118,4 +124,22 @@ test('mantém o playground utilizável em viewport estreito', async ({ page }) =
   expect(dimensoes.larguraDocumento).toBeLessThanOrEqual(dimensoes.larguraViewport);
   await expect(page.locator('#select-exemplo')).toBeVisible();
   await expect(page.locator('#code-editor')).toBeVisible();
+});
+
+test('explica de forma amigável que a entrada com leia não funciona no navegador', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.locator('#status-text')).toHaveText('Python Pronto (Wasm)', {
+    timeout: 120000,
+  });
+  await expect(page.locator('#btn-executar')).toBeEnabled();
+
+  await page.locator('#code-editor').fill('nome = leia("Seu nome: ")\nmostre(nome)');
+  await page.getByRole('button', { name: /Executar/ }).click();
+
+  // Em vez de um EOFError cru, o playground mostra a explicação em português.
+  await expect(page.locator('#terminal-output')).toContainText(
+    'não funciona no playground',
+    { timeout: 15000 }
+  );
 });
