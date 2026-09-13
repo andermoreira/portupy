@@ -1,0 +1,15 @@
+# Exemplo de laço 'para', listas e dicionários
+frutas = ["Maca", "Banana", "Laranja", "Uva"]
+
+mostre("--- Lista de Frutas ---")
+para item em frutas:
+    mostre(f"- Fruta: {item} (letras: {tamanho(item)})")
+
+precos = {
+    "Maca": 3.50,
+    "Banana": 2.20,
+    "Laranja": 4.00,
+}
+
+mostre("")
+mostre(f"Preco da Maca: R$ {precos['Maca']:.2f}")

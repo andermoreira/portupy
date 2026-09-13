@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from transpilador_pt.bundle_web import ARQUIVOS_MODULO, gera_bundle_web
+from transpilador_pt.bundle_web import ARQUIVOS_EXEMPLOS, ARQUIVOS_MODULO, gera_bundle_web
 
 
 class TestBundleWeb(unittest.TestCase):
@@ -15,19 +15,34 @@ class TestBundleWeb(unittest.TestCase):
             caminho_bundle = gera_bundle_web(Path(diretorio_temp) / "bundle.js")
             conteudo = caminho_bundle.read_text(encoding="utf-8")
 
-        correspondencia = re.search(
-            r"window\.TRANSPILADOR_PT_SOURCES = (.*);\s*$",
+        correspondencia_fontes = re.search(
+            r"window\.TRANSPILADOR_PT_SOURCES = (.*);\nwindow\.TRANSPILADOR_PT_EXEMPLOS",
             conteudo,
             re.DOTALL,
         )
-        self.assertIsNotNone(correspondencia)
-        fontes_bundle = json.loads(correspondencia.group(1))
+        correspondencia_exemplos = re.search(
+            r"window\.TRANSPILADOR_PT_EXEMPLOS = (.*);\s*$",
+            conteudo,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(correspondencia_fontes)
+        self.assertIsNotNone(correspondencia_exemplos)
+        fontes_bundle = json.loads(correspondencia_fontes.group(1))
+        exemplos_bundle = json.loads(correspondencia_exemplos.group(1))
         pasta_modulo = Path(__file__).resolve().parent.parent / "transpilador_pt"
 
         self.assertEqual(set(ARQUIVOS_MODULO), set(fontes_bundle))
         for nome_arquivo in ARQUIVOS_MODULO:
             fonte_atual = (pasta_modulo / nome_arquivo).read_text(encoding="utf-8")
             self.assertEqual(fonte_atual, fontes_bundle[nome_arquivo])
+
+        self.assertEqual(
+            {Path(nome).stem for nome in ARQUIVOS_EXEMPLOS},
+            set(exemplos_bundle),
+        )
+        for nome_arquivo in ARQUIVOS_EXEMPLOS:
+            exemplo_atual = (pasta_modulo / "exemplos" / nome_arquivo).read_text(encoding="utf-8")
+            self.assertEqual(exemplo_atual, exemplos_bundle[Path(nome_arquivo).stem])
 
     def test_bundle_versionado_esta_atualizado(self):
         """O artefato versionado deve ser exatamente o bundle que o gerador produz."""

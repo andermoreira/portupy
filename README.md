@@ -17,7 +17,10 @@ transpilador_pt/
 └── exemplos/
     ├── ola.ptpy
     ├── erro.ptpy
-    └── condicionais.ptpy
+    ├── erro_sintaxe.ptpy
+    ├── condicionais.ptpy
+    ├── loop.ptpy
+    └── funcoes.ptpy
 web/                # Playground Web 100% client-side com Pyodide (Wasm)
 ├── index.html      # interface com editor, console e abas bilíngues
 ├── style.css       # design system dark mode moderno com Rich Aesthetics

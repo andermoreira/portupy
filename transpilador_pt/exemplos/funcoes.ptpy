@@ -1,0 +1,15 @@
+# Exemplo de funções matemáticas e builtins curados
+funcao potencia(base, expoente=2):
+    retorne base ** expoente
+
+valores = [1, 2, 3, 4, 5]
+quadrados = []
+
+para n em valores:
+    quadrados.append(potencia(n))
+
+mostre(f"Original: {valores}")
+mostre(f"Quadrados: {quadrados}")
+mostre(f"Soma total: {some(quadrados)}")
+mostre(f"Maior valor: {maximo(quadrados)}")
+mostre(f"Menor valor: {minimo(quadrados)}")

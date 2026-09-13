@@ -1,0 +1,6 @@
+# Exemplo de diagnóstico didático de erro com apontador visual
+# Tente executar e veja como o erro aponta exatamente onde está o problema!
+
+x = 10
+se x > 5
+    mostre("x eh maior que cinco")

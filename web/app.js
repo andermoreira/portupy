@@ -6,89 +6,8 @@
   'use strict';
 
   // --- Catálogo de Exemplos Didáticos --------------------------------------
-  const EXEMPLOS = {
-    ola: `# Exemplo 1: Olá Mundo e f-strings com funções embutidas
-funcao saudacao(nome):
-    se nome eh nulo:
-        retorne "sem nome"
-    senao:
-        retorne "Ola, " + nome
-
-nomes = ["Ana", "Bruno", "Carla"]
-para nome em nomes:
-    mostre(saudacao(nome))
-
-mostre(f"Total de nomes: {tamanho(nomes)}")
-`,
-
-    condicionais: `# Exemplo 2: Condicionais encadeadas e resolução semântica
-funcao classificar_nota(nota):
-    se nota eh nulo:
-        retorne "Nota ausente"
-    senao se nota eh 10:
-        retorne "Excelente (gabaritou!)"
-    senao se nota >= 7:
-        retorne "Aprovado"
-    senao:
-        retorne "Em recuperacao"
-
-notas = [10, 8.5, 4.0, nulo]
-para valor em notas:
-    mostre(f"Nota: {valor} -> {classificar_nota(valor)}")
-
-# Operadores de pertinência e negação
-bloqueados = ["Bruno", "Carlos"]
-aluno = "Ana"
-
-se aluno nao em bloqueados:
-    mostre(f"Acesso liberado para: {aluno}")
-
-se aluno nao eh "Bruno":
-    mostre("Confirmado: aluno nao eh o Bruno")
-`,
-
-    erro: `# Exemplo 3: Diagnóstico didático de erro com apontador visual
-# Tente executar e veja como o erro aponta exatamente onde está o problema!
-
-x = 10
-se x > 5
-    mostre("x eh maior que cinco")
-`,
-
-    loop: `# Exemplo 4: Laço 'para', listas e dicionários
-frutas = ["Maca", "Banana", "Laranja", "Uva"]
-
-mostre("--- Lista de Frutas ---")
-para item em frutas:
-    mostre(f"- Fruta: {item} (letras: {tamanho(item)})")
-
-precos = {
-    "Maca": 3.50,
-    "Banana": 2.20,
-    "Laranja": 4.00,
-}
-
-mostre("")
-mostre(f"Preco da Maca: R$ {precos['Maca']:.2f}")
-`,
-
-    funcoes: `# Exemplo 5: Funções matemáticas e builtins curados
-funcao potencia(base, expoente=2):
-    retorne base ** expoente
-
-valores = [1, 2, 3, 4, 5]
-quadrados = []
-
-para n em valores:
-    quadrados.append(potencia(n))
-
-mostre(f"Original: {valores}")
-mostre(f"Quadrados: {quadrados}")
-mostre(f"Soma total: {some(quadrados)}")
-mostre(f"Maior valor: {maximo(quadrados)}")
-mostre(f"Menor valor: {minimo(quadrados)}")
-`
-  };
+  // O bundle é a fonte única compartilhada pela CLI e pelo playground.
+  const EXEMPLOS = window.TRANSPILADOR_PT_EXEMPLOS || {};
 
   // --- Elementos do DOM ----------------------------------------------------
   const editor = document.getElementById('code-editor');
@@ -645,7 +564,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   btnTentarNovamente.addEventListener('click', () => inicializaPyodide());
 
   // Inicializa com o exemplo 1
-  editor.value = EXEMPLOS.ola;
+  editor.value = EXEMPLOS.ola || '';
   atualizaLinhas();
   atualizaCursorStats();
   atualizaSyntaxHighlight();
