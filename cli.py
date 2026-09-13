@@ -3,11 +3,13 @@
 
 Uso:
     python3 cli.py arquivo.ptpy [--mostrar-python] [--lado-a-lado] [--exportar [destino.py]]
+    python3 cli.py --web [porta]
 """
 
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 
 from transpilador_pt import (
     ErroDeTraducao,
@@ -15,16 +17,36 @@ from transpilador_pt import (
     renderiza_lado_a_lado,
     transpila_canonico,
 )
+from transpilador_pt.servidor import inicia_servidor_web
 
 
 def main() -> int:
     args = sys.argv[1:]
     if not args:
         print(
-            "Uso: python3 cli.py arquivo.ptpy [--mostrar-python] [--lado-a-lado] [--exportar [destino.py]]",
+            "Uso: python3 cli.py [arquivo.ptpy | --web [porta]] [--mostrar-python] [--lado-a-lado] [--exportar [destino.py]]",
             file=sys.stderr,
         )
         return 1
+
+    # Modo Playground Web (--web [porta])
+    if "--web" in args:
+        idx = args.index("--web")
+        porta = 8000
+        if idx + 1 < len(args) and not args[idx + 1].startswith("--"):
+            try:
+                porta = int(args[idx + 1])
+            except ValueError:
+                print(f"Erro: porta inválida '{args[idx + 1]}'.", file=sys.stderr)
+                return 1
+
+        diretorio_web = Path(__file__).resolve().parent / "web"
+        try:
+            inicia_servidor_web(diretorio_web, porta=porta, abrir_navegador=True, bloquear=True)
+            return 0
+        except Exception as exc:
+            print(f"⚠️ Erro ao iniciar servidor web: {exc}", file=sys.stderr)
+            return 1
 
     # Identifica o arquivo de entrada (primeiro argumento posicional não-flag)
     caminho_pt = None
@@ -81,6 +103,7 @@ def main() -> int:
         except (OSError, UnicodeError) as exc:
             print(f"Não consegui ler o arquivo: {exc}", file=sys.stderr)
             return 1
+
         except ErroDeTraducao as exc:
             print(f"Erro ao traduzir: {exc}", file=sys.stderr)
             return 1

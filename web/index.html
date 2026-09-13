@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transpilador PT — Playground Web Interativo</title>
+  <meta name="description" content="Experimente o Transpilador PT diretamente no navegador sem instalar nada. Escreva código Python em português com execução 100% client-side via WebAssembly (Pyodide).">
+  
+  <!-- Fontes do Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Pyodide CDN oficial v0.26.4 -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" defer></script>
+  <!-- Payload embutido dos fontes do transpilador_pt -->
+  <script src="bundle_pt.js" defer></script>
+  <!-- Script principal da aplicação -->
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- Barra de Navegação Superior -->
+  <header class="navbar" id="main-header">
+    <div class="nav-brand">
+      <div class="brand-logo">
+        <span class="logo-pt">PT</span>
+        <span class="logo-py">🐍</span>
+      </div>
+      <div class="brand-info">
+        <h1 class="brand-title">Transpilador PT</h1>
+        <span class="brand-badge">Playground Web (Wasm)</span>
+      </div>
+    </div>
+
+    <div class="nav-center">
+      <div class="selector-wrapper">
+        <label for="select-exemplo" class="selector-label">Exemplos:</label>
+        <select id="select-exemplo" class="select-dropdown" aria-label="Selecione um exemplo de código">
+          <option value="ola">1. Olá Mundo e f-strings (ola.ptpy)</option>
+          <option value="condicionais">2. Condicionais e Operadores (condicionais.ptpy)</option>
+          <option value="erro">3. Diagnóstico de Erros (erro.ptpy)</option>
+          <option value="loop">4. Laço para & Coleções</option>
+          <option value="funcoes">5. Funções & Retornos</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <div class="status-indicator" id="status-indicator" title="Status do ambiente Pyodide">
+        <span class="status-dot status-loading" id="status-dot"></span>
+        <span class="status-text" id="status-text">Inicializando Python...</span>
+      </div>
+      <a href="https://github.com/andermoreira/transpylar" target="_blank" rel="noopener noreferrer" class="btn-github" title="Ver código-fonte no GitHub">
+        <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Área Principal de Trabalho (Grid de Dois Painéis) -->
+  <main class="workspace" id="main-workspace">
+    <!-- Painel Esquerdo: Editor de Código -->
+    <section class="panel editor-panel" aria-label="Editor de Código">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <span class="file-icon">📝</span>
+          <span class="file-name">script.ptpy</span>
+          <span class="file-tag">Português</span>
+        </div>
+        <div class="panel-toolbar">
+          <button id="btn-limpar" class="btn btn-secondary" title="Limpar editor">
+            <span class="btn-icon">🗑</span> Limpar
+          </button>
+          <button id="btn-executar" class="btn btn-primary" title="Executar código (Ctrl+Enter)">
+            <span class="btn-icon">▶</span>
+            <span class="btn-text">Executar</span>
+            <kbd class="shortcut-key">Ctrl+↵</kbd>
+          </button>
+        </div>
+      </div>
+
+      <div class="editor-container" id="editor-wrapper">
+        <div class="line-numbers" id="line-numbers" aria-hidden="true">1</div>
+        <textarea 
+          id="code-editor" 
+          class="code-textarea" 
+          spellcheck="false" 
+          autocorrect="off" 
+          autocapitalize="off" 
+          autocomplete="off"
+          placeholder="Digite seu código em português aqui..."
+          aria-label="Área de edição de código em português"
+        ></textarea>
+      </div>
+
+      <div class="panel-footer editor-footer">
+        <span id="editor-stats">Linha 1, Coluna 1</span>
+        <span class="hint-text">💡 Dica: Use <kbd>Ctrl+Enter</kbd> para rodar rapidamente</span>
+      </div>
+    </section>
+
+    <!-- Painel Direito: Resultados e Visualizações -->
+    <section class="panel output-panel" aria-label="Painel de Resultados">
+      <div class="panel-header">
+        <nav class="tabs-nav" role="tablist" aria-label="Modos de exibição">
+          <button class="tab-btn active" id="tab-btn-terminal" role="tab" aria-selected="true" aria-controls="tab-terminal">
+            <span class="tab-icon">💻</span> Terminal / Saída
+          </button>
+          <button class="tab-btn" id="tab-btn-bilingue" role="tab" aria-selected="false" aria-controls="tab-bilingue">
+            <span class="tab-icon">⇄</span> Lado a Lado
+          </button>
+          <button class="tab-btn" id="tab-btn-canonico" role="tab" aria-selected="false" aria-controls="tab-canonico">
+            <span class="tab-icon">🐍</span> Python Canônico
+          </button>
+        </nav>
+        <div class="output-toolbar">
+          <button id="btn-copiar-saida" class="btn btn-sm btn-ghost" title="Copiar conteúdo atual">
+            <span class="btn-icon">📋</span> Copiar
+          </button>
+        </div>
+      </div>
+
+      <div class="output-content-container">
+        <!-- Aba 1: Terminal Virtual de Execução -->
+        <div class="tab-pane active" id="tab-terminal" role="tabpanel" aria-labelledby="tab-btn-terminal">
+          <div class="terminal-body" id="terminal-output">
+            <div class="terminal-line terminal-system">
+              [Sistema] Aguardando execução... Digite seu código e clique em Executar ▶
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba 2: Comparação Lado a Lado -->
+        <div class="tab-pane" id="tab-bilingue" role="tabpanel" aria-labelledby="tab-btn-bilingue" hidden>
+          <pre class="bilingue-body" id="bilingue-output">Execute o código para visualizar a comparação lado a lado.</pre>
+        </div>
+
+        <!-- Aba 3: Código Python Canônico Exportável -->
+        <div class="tab-pane" id="tab-canonico" role="tabpanel" aria-labelledby="tab-btn-canonico" hidden>
+          <div class="canonico-header-info">
+            <span>Este código é 100% Python puro independente e roda em qualquer computador sem precisar do transpilador:</span>
+          </div>
+          <pre class="canonico-body" id="canonico-output"># O código Python puro canônico aparecerá aqui após a transpilação.</pre>
+        </div>
+      </div>
+
+      <div class="panel-footer output-footer">
+        <div class="footer-left">
+          <span id="output-status">Status: Pronto</span>
+        </div>
+        <div class="footer-right">
+          <span id="execution-time">Tempo: -- ms</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

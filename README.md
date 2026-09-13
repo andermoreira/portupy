@@ -12,20 +12,27 @@ transpilador_pt/
 ├── transicao.py    # renderizador bilíngue lado a lado para transição pedagógica
 ├── erros.py        # tradução de exceções e formatação com apontador visual
 ├── executor.py      # compila e roda com injeção de builtins PT
+├── servidor.py      # servidor HTTP estático local para o Playground Web
+├── bundle_web.py   # gerador do payload dos fontes para o ambiente WebAssembly
 └── exemplos/
     ├── ola.ptpy
     ├── erro.ptpy
     └── condicionais.ptpy
-adr/                # Architecture Decision Records (ADR 001, ADR 002, ADR 003)
+web/                # Playground Web 100% client-side com Pyodide (Wasm)
+├── index.html      # interface com editor, console e abas bilíngues
+├── style.css       # design system dark mode moderno com Rich Aesthetics
+├── app.js          # motor de integração Pyodide e execução no navegador
+└── bundle_pt.js    # fontes do transpilador empacotados para o filesystem Wasm
+adr/                # Architecture Decision Records (ADR 001, ADR 002, ADR 003, ADR 004)
 specs/              # especificações ativas, arquivadas e passos de implementação
 tests/              # suíte de testes automatizados (unittest)
-cli.py              # interface de linha de comando com modos de execução, transição e exportação
+cli.py              # interface de linha de comando com modos de execução, transição, exportação e web
 ```
 
 ## Como rodar
 
 ```bash
-# 1. Executar scripts de exemplo normalmente
+# 1. Executar scripts de exemplo normalmente no terminal
 python3 cli.py transpilador_pt/exemplos/ola.ptpy
 python3 cli.py transpilador_pt/exemplos/condicionais.ptpy
 python3 cli.py transpilador_pt/exemplos/erro.ptpy
@@ -39,10 +46,14 @@ python3 cli.py transpilador_pt/exemplos/ola.ptpy --exportar                # imp
 python3 cli.py transpilador_pt/exemplos/ola.ptpy --exportar meu_script.py  # salva em arquivo
 python3 meu_script.py                                                      # roda sem o transpilador!
 
-# 4. Ver o Python intermediário de compilação
+# 4. Iniciar o Playground Web no navegador (100% client-side via Pyodide)
+python3 cli.py --web        # abre http://localhost:8000 automaticamente
+python3 cli.py --web 8080   # porta customizada opcional
+
+# 5. Ver o Python intermediário de compilação
 python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python
 
-# 5. Executar a suíte de testes automatizados
+# 6. Executar a suíte completa de testes automatizados
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
@@ -57,6 +68,7 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 - **Operadores compostos de negação e pertinência (ADR-002):** Expressões como `nao eh` (`is not` / `!=`) e `nao em` (`not in`) funcionam naturalmente.
 - **Modo de Transição Bilíngue (ADR-003):** Flag `--lado-a-lado` (ou `--modo-transicao`) exibe tabela comparativa sincronizada linha a linha entre o código em português e o Python canônico com ajuste automático à largura do terminal.
 - **Exportador para Python Canônico Puro (ADR-003):** Flag `--exportar [destino.py]` traduz chamadas de builtins pedagógicos (`mostre` -> `print`, `tamanho` -> `len`, `intervalo` -> `range`, etc.) gerando scripts Python 100% autônomos que rodam diretamente em qualquer interpretador Python padrão sem requerer o transpilador.
+- **Playground Web Interativo com Pyodide (ADR-004):** Aplicação web moderna executando 100% no navegador do cliente via WebAssembly (Wasm), com editor de código em português, visualização bilíngue lado a lado, exportação instantânea e catálogo de exemplos didáticos sem necessidade de instalação local ou servidores backend.
 - **Variáveis intuitivas liberadas:** Nomes comuns como `lista = [1, 2, 3]`, `texto = "olá"` ou `tipo = 10` são permitidos livremente e não colidem com palavras reservadas nem são alterados indevidamente na exportação.
 - **Preservação de atributos de objetos:** Acessos e atribuições como `objeto.tipo` e `self.tipo = valor` são preservados sem substituição indevida de tokens.
 - **Números de linha e apontador visual:** Tracebacks apontam 1:1 para a linha do `.ptpy` original, e erros de compilação exibem o trecho de código com o cursor `^`.
@@ -73,4 +85,4 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 1. [x] **Fase 1:** Estabilização do protótipo (injeção em runtime, f-strings, preservação de atributos, diagnóstico rico com cursor `^`).
 2. [x] **Fase 2:** Ergonomia semântica de condicionais (`senao se`, resolução contextual de `eh`/`é`, operadores `nao eh` e `nao em`).
 3. [x] **Fase 3:** Modo de transição bilíngue (`--lado-a-lado`) e exportador autônomo para Python canônico (`--exportar`).
-4. [ ] **Fase 4:** Playground Web empacotado com **Pyodide** para experimentação direta no navegador sem instalação local.
+4. [x] **Fase 4:** Playground Web empacotado com **Pyodide** para experimentação direta no navegador sem instalação local.

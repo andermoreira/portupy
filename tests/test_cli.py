@@ -120,7 +120,33 @@ class TestCLI(unittest.TestCase):
         self.assertIn("Português", saida)
         self.assertIn("Python Canônico", saida)
 
+    def test_cli_web_padrao(self):
+        """CLI com --web chama inicia_servidor_web na porta padrão 8000 (AC-07)."""
+        with patch("cli.inicia_servidor_web") as mock_inicia:
+            with patch.object(sys, "argv", ["cli.py", "--web"]):
+                status = cli.main()
+        self.assertEqual(0, status)
+        mock_inicia.assert_called_once()
+        self.assertEqual(8000, mock_inicia.call_args.kwargs.get("porta"))
+
+    def test_cli_web_porta_customizada(self):
+        """CLI com --web 9000 passa porta customizada (AC-07)."""
+        with patch("cli.inicia_servidor_web") as mock_inicia:
+            with patch.object(sys, "argv", ["cli.py", "--web", "9000"]):
+                status = cli.main()
+        self.assertEqual(0, status)
+        mock_inicia.assert_called_once()
+        self.assertEqual(9000, mock_inicia.call_args.kwargs.get("porta"))
+
+    def test_cli_web_porta_invalida(self):
+        """CLI com porta inválida exibe erro amigável em stderr e retorna 1 (AC-07)."""
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", ["cli.py", "--web", "porta_invalida"]), contextlib.redirect_stderr(stderr):
+            status = cli.main()
+        self.assertEqual(1, status)
+        self.assertIn("porta inválida", stderr.getvalue())
 
 
 if __name__ == "__main__":
     unittest.main()
+
