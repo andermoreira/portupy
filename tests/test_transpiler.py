@@ -158,6 +158,31 @@ class TestTranspiler(unittest.TestCase):
         self.assertIn("resultado=mostre", codigo_py.replace(" ", ""))
         self.assertNotIn("resultado=print", codigo_py.replace(" ", ""))
 
+    def test_transpila_canonico_preserva_nome_de_classe_builtin(self):
+        """Nomes de classes não devem ser confundidos com chamadas a builtins."""
+        codigo_py = transpila_canonico(
+            "classe lista:\n"
+            "    passe\n"
+            "resultado = lista\n"
+        )
+        namespace = {}
+        exec(codigo_py, {}, namespace)
+
+        self.assertIn("class lista", codigo_py)
+        self.assertIsInstance(namespace["resultado"], type)
+
+    def test_transpila_canonico_preserva_nomes_em_importacao(self):
+        """Módulos e símbolos importados mantêm o nome original."""
+        codigo_py = transpila_canonico(
+            "de tamanho importe valor\n"
+            "importe lista\n"
+        )
+
+        self.assertIn("from tamanho import valor", codigo_py)
+        self.assertIn("import lista", codigo_py)
+        self.assertNotIn("from len import", codigo_py)
+        self.assertNotIn("import list\n", codigo_py)
+
     def test_transpila_canonico_preserva_parametro_sombreado_em_chamada_nomeada(self):
         """Valida que parâmetros builtin não são renomeados no cabeçalho."""
         codigo_pt = (

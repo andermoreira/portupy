@@ -35,6 +35,18 @@ ASSIGNMENT_OPERATORS = {
 }
 
 
+def _nome_em_declaracao_de_importacao(
+    tokens: list[tokenize.TokenInfo], indice: int,
+) -> bool:
+    """Preserva nomes que fazem parte da sintaxe de ``importe``/``de``."""
+    for tok in reversed(tokens[:indice]):
+        if tok.type in (token.NEWLINE, token.INDENT, token.DEDENT):
+            break
+        if tok.type == token.NAME and tok.string in ("de", "importe", "import"):
+            return True
+    return False
+
+
 def _has_assignment_until_statement_end(
     tokens: list[tokenize.TokenInfo], start: int,
 ) -> bool:
@@ -357,6 +369,12 @@ def _transpila_core(
                 # Mantém identificadores vinculados ao escopo atual, preservando
                 # o comportamento normal de sombreamento de nomes em Python.
                 eh_definicao_funcao = anterior is not None and anterior.type == token.NAME and anterior.string in ("def", "funcao", "função")
+                eh_nome_declaracao = (
+                    anterior is not None
+                    and anterior.type == token.NAME
+                    and anterior.string in ("classe", "class", "def", "funcao", "função")
+                )
+                eh_nome_importado = _nome_em_declaracao_de_importacao(fluxo, i)
                 eh_alvo_atribuicao = _has_assignment_until_statement_end(fluxo, i)
                 eh_nome_vinculado = (
                     i in parameter_indices
@@ -371,6 +389,8 @@ def _transpila_core(
                 
                 if (
                     not eh_definicao_funcao
+                    and not eh_nome_declaracao
+                    and not eh_nome_importado
                     and not eh_alvo_atribuicao
                     and not eh_nome_vinculado
                 ):
