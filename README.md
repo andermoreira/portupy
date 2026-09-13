@@ -1,7 +1,62 @@
-# PortuPy — protótipo
+# PortuPy
 
-Protótipo funcional de um transpilador Python-em-português, construído
-com o módulo `tokenize` da stdlib (sem parser próprio).
+**Escreva Python em português.** O PortuPy traduz palavras-chave e funções
+embutidas para os equivalentes em português (`se`, `para`, `funcao`, `mostre`,
+`tamanho`...), executa o código e mostra erros explicados em português — tudo
+para reduzir a barreira de quem está começando a programar.
+
+A filosofia é ser uma **rampa de acesso ao Python real**, não um dialeto
+isolado: o mesmo código pode ser exportado para Python canônico (`mostre` →
+`print`, `tamanho` → `len`) que roda em qualquer interpretador, sem o PortuPy.
+Bibliotecas do ecossistema (`math`, `requests`, ...) continuam como são, porque
+o objetivo é levar o aluno ao Python de verdade, não afastá-lo dele.
+
+Por baixo, não há parser próprio: o PortuPy reusa o módulo `tokenize` da
+biblioteca padrão e substitui apenas os tokens que precisa, preservando strings,
+comentários, números e indentação.
+
+## Exemplo
+
+```python
+funcao saudacao(nome):
+    se nome eh nulo:
+        retorne "sem nome"
+    senao:
+        retorne "Ola, " + nome
+
+nomes = ["Ana", "Bruno", "Carla"]
+para nome em nomes:
+    mostre(saudacao(nome))
+mostre(f"Total de nomes: {tamanho(nomes)}")
+```
+
+```text
+Ola, Ana
+Ola, Bruno
+Ola, Carla
+Total de nomes: 3
+```
+
+Esse mesmo arquivo pode ser exportado para Python canônico (`--exportar`) e
+executado sem o PortuPy, ou experimentado no navegador pelo playground web.
+
+## Instalação
+
+```bash
+pip install portupy
+```
+
+> O PortuPy é distribuído no PyPI como [`portupy`](https://pypi.org/project/portupy/).
+> Enquanto o pacote não estiver publicado, use a instalação a partir do código
+> (`pip install .` na raiz do repositório) — veja a seção [Como rodar](#como-rodar).
+
+Depois de instalado, a CLI fica disponível como `portupy`:
+
+```bash
+portupy meu_programa.ptpy          # executa
+portupy meu_programa.ptpy --exportar programa.py   # gera Python canônico
+portupy --web                      # abre o playground no navegador
+```
 
 ## Estrutura
 
@@ -33,9 +88,15 @@ adr/                # Architecture Decision Records (ADR 001, ADR 002, ADR 003, 
 specs/              # especificações ativas, arquivadas e passos de implementação
 tests/              # suíte de testes automatizados (unittest)
 cli.py              # interface de linha de comando com modos de execução, transição, exportação e web
+LICENSE             # licença MIT
+PUBLISHING.md       # guia de publicação no PyPI
 ```
 
 ## Como rodar
+
+Os comandos abaixo usam `python3 cli.py` para rodar direto do repositório (útil
+para desenvolvimento). Com o pacote instalado, troque `python3 cli.py` por
+`portupy`.
 
 ```bash
 # 1. Executar scripts de exemplo normalmente no terminal
@@ -134,3 +195,11 @@ O `pyproject.toml` publica a CLI como `portupy` e inclui os exemplos, o
 playground estático e o runtime Pyodide local no wheel. A suíte de CI constrói esse
 artefato para verificar que uma instalação do pacote continua capaz de localizar o
 servidor web e seus assets.
+
+O passo a passo de release (build, verificação e envio ao PyPI) está em
+[`PUBLISHING.md`](PUBLISHING.md).
+
+## Licença
+
+Distribuído sob a licença [MIT](LICENSE). O runtime Pyodide incluído em
+`web/vendor/pyodide/` mantém sua própria licença Apache-2.0.
