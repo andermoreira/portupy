@@ -571,19 +571,20 @@ body {
 .terminal-line {
   margin-bottom: 4px;
   white-space: pre-wrap;
-  word-break: break-word;
+  /* 'anywhere' evita cortar palavras curtas no meio (ex.: "recuado.") e não
+     acrescenta deslocamento lateral, preservando o alinhamento do cursor '^'. */
+  overflow-wrap: anywhere;
 }
 
 .terminal-stdout {
   color: #f1f5f9;
 }
 
+/* stderr sinaliza erro apenas pela cor, sem "caixa de alerta": manter o texto
+   no mesmo alinhamento do stdout garante que o cursor '^' do diagnóstico
+   aponte exatamente a coluna do código na linha logo acima. */
 .terminal-stderr {
   color: #f87171;
-  background: rgba(239, 68, 68, 0.08);
-  padding: 2px 6px;
-  border-radius: 4px;
-  border-left: 3px solid #ef4444;
 }
 
 .terminal-system {
