@@ -2,18 +2,18 @@
 
 **Escreva Python em português.** O PortuPy traduz palavras-chave e funções
 embutidas para os equivalentes em português (`se`, `para`, `funcao`, `mostre`,
-`tamanho`...), executa o código e mostra erros explicados em português — tudo
-para reduzir a barreira de quem está começando a programar.
+`tamanho`...), executa o código e explica os erros em português. A proposta é
+reduzir a barreira de entrada para quem está começando a programar.
 
-A filosofia é ser uma **rampa de acesso ao Python real**, não um dialeto
-isolado: o mesmo código pode ser exportado para Python canônico (`mostre` →
-`print`, `tamanho` → `len`) que roda em qualquer interpretador, sem o PortuPy.
-Bibliotecas do ecossistema (`math`, `requests`, ...) continuam como são, porque
-o objetivo é levar o aluno ao Python de verdade, não afastá-lo dele.
+O PortuPy foi pensado como uma etapa de entrada no Python padrão. O mesmo código
+pode ser exportado para Python canônico (`mostre` → `print`, `tamanho` → `len`)
+e executado em qualquer interpretador, sem o PortuPy. As bibliotecas do
+ecossistema (`math`, `requests`, ...) permanecem como são. O aluno encontra os
+mesmos nomes ao usar essas bibliotecas no Python padrão.
 
-Por baixo, não há parser próprio: o PortuPy reusa o módulo `tokenize` da
-biblioteca padrão e substitui apenas os tokens que precisa, preservando strings,
-comentários, números e indentação.
+O PortuPy usa o módulo `tokenize` da biblioteca padrão em vez de um parser
+próprio. Substitui apenas os tokens necessários e preserva strings, comentários,
+números e indentação.
 
 ## Exemplo
 
@@ -37,8 +37,8 @@ Ola, Carla
 Total de nomes: 3
 ```
 
-Esse mesmo arquivo pode ser exportado para Python canônico (`--exportar`) e
-executado sem o PortuPy, ou experimentado no navegador pelo playground web.
+Esse arquivo pode ser exportado para Python canônico (`--exportar`) e executado
+sem o PortuPy. Também pode ser experimentado no navegador pelo playground web.
 
 ## Instalação
 
@@ -68,8 +68,8 @@ portupy/
 ├── transicao.py    # renderizador bilíngue lado a lado para transição pedagógica
 ├── erros.py        # tradução de exceções e formatação com apontador visual
 ├── executor.py      # compila e roda com injeção de builtins PT
-├── servidor.py      # servidor HTTP estático local para o Playground Web
-├── bundle_web.py   # gerador do payload dos fontes para o ambiente WebAssembly
+├── servidor.py      # servidor HTTP estático local para o playground web
+├── bundle_web.py   # gera o payload das fontes para o ambiente WebAssembly
 └── exemplos/
     ├── ola.ptpy
     ├── condicionais.ptpy
@@ -83,13 +83,13 @@ portupy/
     ├── fizzbuzz.ptpy
     ├── fibonacci.ptpy
     └── textos.ptpy
-web/                # Playground Web 100% client-side com Pyodide (Wasm)
+web/                # playground web executado no cliente com Pyodide (Wasm)
 ├── index.html      # interface com editor, console e abas bilíngues
-├── style.css       # design system dark mode moderno com Rich Aesthetics
-├── app.js          # motor de integração Pyodide e execução no navegador
-├── pyodide-worker.js # execução isolada do Pyodide com limite de tempo
+├── style.css       # estilos do playground em modo escuro
+├── app.js          # integração com Pyodide e execução no navegador
+├── pyodide-worker.js # execução do Pyodide com limite de tempo
 ├── service-worker.js # cache do shell e dos assets Pyodide após o primeiro acesso
-└── bundle_pt.js    # fontes do transpilador empacotados para o filesystem Wasm
+└── bundle_pt.js    # fontes do transpilador empacotados para o filesystem do Wasm
 adr/                # Architecture Decision Records (ADR 001, ADR 002, ADR 003, ADR 004)
 specs/              # especificações ativas, arquivadas e passos de implementação
 tests/              # suíte de testes automatizados (unittest)
@@ -100,26 +100,25 @@ PUBLISHING.md       # guia de publicação no PyPI
 
 ## Como rodar
 
-Os comandos abaixo usam `python3 cli.py` para rodar direto do repositório (útil
-para desenvolvimento). Com o pacote instalado, troque `python3 cli.py` por
-`portupy`.
+Os exemplos abaixo executam `python3 cli.py` diretamente no repositório. Depois
+de instalar o pacote, substitua `python3 cli.py` por `portupy`.
 
 ```bash
-# 1. Executar scripts de exemplo normalmente no terminal
+# 1. Executar exemplos no terminal
 python3 cli.py portupy/exemplos/ola.ptpy
 python3 cli.py portupy/exemplos/condicionais.ptpy
 python3 cli.py portupy/exemplos/erro.ptpy
 
-# 2. Modo de transição bilíngue (lado a lado)
+# 2. Usar o modo de transição bilíngue (lado a lado)
 python3 cli.py portupy/exemplos/condicionais.ptpy --lado-a-lado
-# (ou use o alias: python3 cli.py portupy/exemplos/condicionais.ptpy --modo-transicao)
+# (alias: python3 cli.py portupy/exemplos/condicionais.ptpy --modo-transicao)
 
-# 3. Exportar para código Python canônico independente
+# 3. Exportar para Python canônico
 python3 cli.py portupy/exemplos/ola.ptpy --exportar                # imprime no terminal
 python3 cli.py portupy/exemplos/ola.ptpy --exportar meu_script.py  # salva em arquivo
 python3 meu_script.py                                                      # roda sem o transpilador!
 
-# 4. Iniciar o Playground Web no navegador (100% client-side via Pyodide)
+# 4. Iniciar o playground web no navegador via Pyodide
 python3 cli.py --web        # abre http://localhost:8000 automaticamente
 python3 cli.py --web 8080   # porta customizada opcional
 python3 cli.py --web --sem-navegador  # inicia sem abrir interface gráfica
@@ -127,7 +126,7 @@ python3 cli.py --web --sem-navegador  # inicia sem abrir interface gráfica
 # 5. Ver o Python intermediário de compilação
 python3 cli.py portupy/exemplos/condicionais.ptpy --mostrar-python
 
-# 6. Executar a suíte completa de testes automatizados
+# 6. Executar os testes automatizados
 python3 -m unittest discover -s tests -p "test_*.py"
 
 # 7. Instalar o pacote e usar a CLI globalmente (opcional)
@@ -146,11 +145,11 @@ npm run test:e2e
 ```
 
 O pacote inclui localmente o runtime Pyodide 0.26.4, o módulo Python padrão e os
-assets do playground. Por isso, depois que a página ou o servidor local estiverem
+assets do playground. Depois que a página ou o servidor local estiverem
 disponíveis, a primeira execução pode ocorrer sem baixar o runtime de uma CDN. O
-Service Worker também mantém o shell e esses assets em cache para reaberturas
-offline. O acesso a um site ainda depende de o shell ter sido obtido por uma visita
-online anterior ou ser servido localmente pela CLI.
+Service Worker mantém o shell e esses assets em cache para reaberturas offline.
+No site hospedado, o shell precisa ter sido obtido em uma visita online anterior;
+com a CLI, ele é servido localmente.
 
 Os assets versionados e seus hashes estão em
 [`web/vendor/pyodide/manifest.json`](web/vendor/pyodide/manifest.json). A cópia é
@@ -163,44 +162,43 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 
 ## O que já funciona
 
-- **Injeção de builtins em runtime (ADR-001):** Funções e tipos curados (`mostre`, `leia`, `tamanho`, `intervalo`, `lista`, `texto`, etc.) são injetados diretamente no ambiente de execução.
-- **f-strings nativas:** Expressões interpoladas como `f"Total: {tamanho(nomes)}"` funcionam sem atrito em qualquer versão do Python.
-- **Condicionais encadeadas naturais (ADR-002):** Suporte completo a `senao se`, `senão se`, `senaose` e `senãose` transpilando para `elif` do Python (com `ouse` mantido por retrocompatibilidade).
-- **Resolução semântica segura de 'eh'/'é' (ADR-002):** Traduz para `is` quando comparado a singletons (`nulo`, `verdadeiro`, `falso`) e para `==` quando comparado a literais e variáveis, prevenindo `SyntaxWarning` e armadilhas de identidade de objetos.
+- **Injeção de builtins no runtime (ADR-001):** Funções e tipos selecionados (`mostre`, `leia`, `tamanho`, `intervalo`, `lista`, `texto`, etc.) são injetados diretamente no ambiente de execução.
+- **f-strings nativas:** Expressões interpoladas como `f"Total: {tamanho(nomes)}"` são aceitas diretamente.
+- **Condicionais encadeadas (ADR-002):** Suporte completo a `senao se`, `senão se`, `senaose` e `senãose`, transpilados para `elif` do Python. `ouse` é mantido por retrocompatibilidade.
+- **Resolução contextual de `eh`/`é` (ADR-002):** A expressão é traduzida para `is` quando comparada a singletons (`nulo`, `verdadeiro`, `falso`) e para `==` quando comparada a literais e variáveis, evitando `SyntaxWarning` e comparações de identidade indevidas.
 - **Operadores compostos de negação e pertinência (ADR-002):** Expressões como `nao eh` (`is not` / `!=`) e `nao em` (`not in`) funcionam naturalmente.
-- **Modo de Transição Bilíngue (ADR-003):** Flag `--lado-a-lado` (ou `--modo-transicao`) exibe tabela comparativa sincronizada linha a linha entre o código em português e o Python canônico com ajuste automático à largura do terminal.
-- **Exportador para Python Canônico Puro (ADR-003):** Flag `--exportar [destino.py]` traduz chamadas de builtins pedagógicos (`mostre` -> `print`, `tamanho` -> `len`, `intervalo` -> `range`, etc.) gerando scripts Python 100% autônomos que rodam diretamente em qualquer interpretador Python padrão sem requerer o transpilador.
-- **Playground Web Interativo com Pyodide (ADR-004):** Aplicação web moderna executando 100% no navegador do cliente via WebAssembly (Wasm), com editor de código em português, visualização bilíngue lado a lado, exportação instantânea e catálogo de exemplos didáticos sem necessidade de instalação local ou servidores backend.
-- **Execução isolada no navegador:** O Pyodide roda em Worker dedicado; execuções que ultrapassam 10 segundos encerram o Worker e inicializam um ambiente novo sem congelar a interface.
-- **Variáveis intuitivas liberadas:** Nomes comuns como `lista = [1, 2, 3]`, `texto = "olá"` ou `tipo = 10` são permitidos livremente e não colidem com palavras reservadas nem são alterados indevidamente na exportação.
+- **Modo de transição bilíngue (ADR-003):** A flag `--lado-a-lado` (ou `--modo-transicao`) exibe uma tabela comparativa sincronizada linha a linha entre o código em português e o Python canônico, com ajuste automático à largura do terminal.
+- **Exportador para Python canônico (ADR-003):** A flag `--exportar [destino.py]` traduz chamadas de builtins pedagógicos (`mostre` → `print`, `tamanho` → `len`, `intervalo` → `range`, etc.) e gera scripts Python independentes, que rodam diretamente em qualquer interpretador padrão sem o transpilador.
+- **Playground web com Pyodide (ADR-004):** Aplicação que executa o código no navegador via WebAssembly (Wasm). Inclui editor em português, visualização bilíngue lado a lado, exportação e catálogo de exemplos didáticos. Não requer instalação local nem servidor backend.
+- **Execução em Worker no navegador:** O Pyodide roda em um Worker dedicado. Se a execução ultrapassar 10 segundos, o Worker é encerrado e um ambiente novo é inicializado sem bloquear a interface.
+- **Nomes de variáveis comuns:** Nomes como `lista = [1, 2, 3]`, `texto = "olá"` e `tipo = 10` podem ser usados sem colidir com palavras reservadas nem ser alterados indevidamente na exportação.
 - **Preservação de atributos de objetos:** Acessos e atribuições como `objeto.tipo` e `self.tipo = valor` são preservados sem substituição indevida de tokens.
 - **Números de linha e apontador visual:** Tracebacks apontam 1:1 para a linha do `.ptpy` original, e erros de compilação exibem o trecho de código com o cursor `^`.
-- **Tradução didática de erros:** Cobertura de `SyntaxError`, `IndentationError`, `IndexError`, `NameError`, `ZeroDivisionError`, `TypeError`, `AttributeError`, `ValueError`, entre outros.
-- **Detecção antecipada de colisão:** Tentar atribuir a palavras-chave estruturais da sintaxe (`para = 5`, `se = 1`, `senao se = 2`) gera uma explicação amigável antes de disparar erro de sintaxe cru do interpretador.
+- **Tradução de erros:** Cobertura de `SyntaxError`, `IndentationError`, `IndexError`, `NameError`, `ZeroDivisionError`, `TypeError`, `AttributeError`, `ValueError`, entre outros.
+- **Detecção de colisão com palavras estruturais:** Tentar atribuir a palavras-chave da sintaxe (`para = 5`, `se = 1`, `senao se = 2`) gera uma explicação antes que o interpretador produza um erro de sintaxe.
 
-A superfície suportada está detalhada na [matriz de suporte da linguagem](docs/matriz-de-suporte.md),
-que também aponta os testes responsáveis por proteger cada grupo de construções.
+A [matriz de suporte da linguagem](docs/matriz-de-suporte.md) detalha a superfície
+suportada e aponta os testes que protegem cada grupo de construções.
 
-## Limitações conhecidas (por design)
+## Limitações conhecidas
 
-- **Apenas a gramática inicial e builtins curados são em português.** Bibliotecas externas (`requests`, `pandas`) continuam em inglês por design para servir de rampa de acesso, não de ecossistema isolado.
+- **Gramática inicial e builtins selecionados.** O PortuPy traduz esses elementos para o português. Bibliotecas externas (`requests`, `pandas`) continuam em inglês, mantendo os nomes usados no ecossistema Python.
 - **Colisão de palavras estruturais.** `para`, `em`, `e`, `ou`, `com` são reservadas para a gramática, exatamente como `for`/`in`/`and`/`or`/`with` são em inglês.
 - **Execução local sem sandbox.** O executor da CLI é apropriado para scripts locais confiáveis, mas não deve ser usado para executar código de terceiros como se fosse um ambiente isolado.
-- **Runtime Web versionado no pacote.** O primeiro carregamento do shell hospedado ainda precisa chegar ao navegador por uma conexão ou por um servidor local; o runtime Pyodide não é mais uma dependência de CDN em tempo de execução.
+- **Runtime web versionado no pacote.** No primeiro acesso ao shell hospedado, o navegador ainda precisa de uma conexão ou de um servidor local. Depois disso, o runtime Pyodide não depende de uma CDN em tempo de execução.
 
 ## Roadmap
 
 1. [x] **Fase 1:** Estabilização do protótipo (injeção em runtime, f-strings, preservação de atributos, diagnóstico rico com cursor `^`).
 2. [x] **Fase 2:** Ergonomia semântica de condicionais (`senao se`, resolução contextual de `eh`/`é`, operadores `nao eh` e `nao em`).
-3. [x] **Fase 3:** Modo de transição bilíngue (`--lado-a-lado`) e exportador autônomo para Python canônico (`--exportar`).
-4. [x] **Fase 4:** Playground Web empacotado com **Pyodide** para experimentação direta no navegador sem instalação local.
+3. [x] **Fase 3:** Modo de transição bilíngue (`--lado-a-lado`) e exportador independente para Python canônico (`--exportar`).
+4. [x] **Fase 4:** Playground web empacotado com **Pyodide** para executar exemplos no navegador sem instalação local.
 
 ## Distribuição
 
-O `pyproject.toml` publica a CLI como `portupy` e inclui os exemplos, o
-playground estático e o runtime Pyodide local no wheel. A suíte de CI constrói esse
-artefato para verificar que uma instalação do pacote continua capaz de localizar o
-servidor web e seus assets.
+O `pyproject.toml` publica a CLI como `portupy` e inclui no wheel os exemplos, o
+playground estático e o runtime Pyodide local. A suíte de CI constrói esse artefato
+e verifica se o pacote instalado localiza o servidor web e seus assets.
 
 O passo a passo de release (build, verificação e envio ao PyPI) está em
 [`PUBLISHING.md`](PUBLISHING.md).
