@@ -8,7 +8,8 @@ com o módulo `tokenize` da stdlib (sem parser próprio).
 ```
 transpilador_pt/
 ├── dicionario.py   # palavras-chave estruturais + builtins PT em runtime e canônicos
-├── transpiler.py   # transpilador com fusão de tokens, sensibilidade a contexto e exportador canônico
+├── transpiler.py   # núcleo léxico: fusão de tokens, sensibilidade a contexto e exportador canônico
+├── escopo_canonico.py # análise de escopo (ast/symtable) que protege nomes locais na exportação
 ├── transicao.py    # renderizador bilíngue lado a lado para transição pedagógica
 ├── erros.py        # tradução de exceções e formatação com apontador visual
 ├── executor.py      # compila e roda com injeção de builtins PT

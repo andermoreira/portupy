@@ -43,6 +43,7 @@ Adotamos a **Alternativa B (Playground 100% Client-Side com Pyodide)**:
    - O runtime Pyodide 0.26.4 é distribuído localmente em `web/vendor/pyodide/`, com manifesto de hashes e aviso de licença.
    - A aplicação usa o mesmo diretório local como `indexURL`, sem depender de rede para o runtime.
    - Os arquivos-fonte do `transpilador_pt` (`dicionario.py`, `transpiler.py`, `transicao.py`, `erros.py`, `executor.py`) são montados no sistema de arquivos virtual do Pyodide (`/home/pyodide/transpilador_pt/`) a partir do bundle estático.
+     - _Nota (pós-Fase 4): a análise de escopo canônico foi extraída de `transpiler.py` para `escopo_canonico.py`, que passou a integrar o conjunto de fontes montado no Pyodide (via `ARQUIVOS_MODULO` em `bundle_web.py`)._
 3. **Fluxos de Interação na Interface:**
    - **Editor:** Área de edição com numeração de linhas, atalhos de teclado (`Ctrl+Enter` / `Cmd+Enter` para rodar) e seletor de exemplos integrados (`ola.ptpy`, `condicionais.ptpy`, etc.).
    - **Console / Terminal Virtual:** Captura de `stdout` e `stderr` com renderização limpa e indicação de status de execução.
