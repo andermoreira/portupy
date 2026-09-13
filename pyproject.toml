@@ -8,10 +8,25 @@ dynamic = ["version"]
 description = "PortuPy: Python escrito em português, com CLI e playground WebAssembly"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "MIT" }
 authors = [
-  { name = "Transpilador PT contributors" }
+  { name = "Anderson Alves", email = "contatodeanderson@gmail.com" }
+]
+keywords = [
+  "python",
+  "portuguese",
+  "portugues",
+  "education",
+  "transpiler",
+  "teaching",
+  "pyodide",
 ]
 classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Education",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: Portuguese (Brazilian)",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
@@ -19,7 +34,13 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Education",
+  "Topic :: Software Development :: Compilers",
 ]
+
+[project.urls]
+Homepage = "https://github.com/andermoreira/portupy"
+Repository = "https://github.com/andermoreira/portupy"
+Issues = "https://github.com/andermoreira/portupy/issues"
 
 [project.scripts]
 portupy = "cli:main"
