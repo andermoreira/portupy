@@ -35,6 +35,21 @@ class TestWebAssets(unittest.TestCase):
         self.assertIn("vendor/pyodide/v0.26.4/full/", worker)
         self.assertIn("python_stdlib.zip", service_worker)
 
+    def test_service_worker_embute_hashes_do_manifesto(self):
+        from portupy.bundle_web import PREFIXO_PATH_PYODIDE
+
+        service_worker = (self.pasta_web / "service-worker.js").read_text(encoding="utf-8")
+        self.assertIn("crypto.subtle.digest", service_worker)
+        self.assertIn("PYODIDE_INTEGRITY", service_worker)
+        for arquivo in self.manifest["files"]:
+            self.assertIn(PREFIXO_PATH_PYODIDE + arquivo["path"], service_worker)
+            self.assertIn(arquivo["sha256"], service_worker)
+
+    def test_worker_restringe_cache_storage_apos_inicializar(self):
+        worker = (self.pasta_web / "pyodide-worker.js").read_text(encoding="utf-8")
+        self.assertIn("restringeApisPersistentesDoWorker", worker)
+        self.assertIn("importScriptsBloqueado", worker)
+
 
 if __name__ == "__main__":
     unittest.main()

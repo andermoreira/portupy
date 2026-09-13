@@ -142,4 +142,7 @@ test('explica de forma amigável que a entrada com leia não funciona no navegad
     'não funciona no playground',
     { timeout: 15000 }
   );
+  await expect(page.locator('#terminal-output')).not.toContainText(
+    'ainda sem tradução'
+  );
 });

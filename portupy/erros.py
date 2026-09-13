@@ -19,6 +19,21 @@ from typing import Callable
 
 Regra = tuple[type[BaseException], re.Pattern, Callable[[re.Match], str]]
 
+MENSAGEM_ENTRADA_PLAYGROUND = (
+    "A leitura de entrada com 'leia' (input) não funciona no playground do "
+    "navegador, porque aqui não há teclado conectado ao programa como no "
+    "terminal. Para testar com entrada, rode este código na CLI "
+    "(python3 cli.py arquivo.ptpy) ou substitua a chamada por um valor fixo, "
+    "por exemplo: nome = 'Ana'."
+)
+
+
+class EntradaIndisponivelError(Exception):
+    """Raised in the web playground when input()/leia() has no stdin."""
+
+    def __init__(self, mensagem: str | None = None) -> None:
+        super().__init__(mensagem or MENSAGEM_ENTRADA_PLAYGROUND)
+
 
 def _regra(excecao: type[BaseException], padrao: str, gerador: Callable[[re.Match], str]) -> Regra:
     return (excecao, re.compile(padrao), gerador)
@@ -160,6 +175,8 @@ REGRAS: list[Regra] = [
 def traduz_excecao(exc: BaseException) -> str | None:
     """Retorna uma explicação em português para a exceção, ou None se
     nenhuma regra conhecida bater (nesse caso, mostre o erro original)."""
+    if isinstance(exc, EntradaIndisponivelError):
+        return str(exc)
     texto_busca = exc.msg if isinstance(exc, SyntaxError) and getattr(exc, "msg", None) else str(exc)
     for tipo, padrao, gerador in REGRAS:
         if isinstance(exc, tipo):

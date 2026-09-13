@@ -4,7 +4,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from portupy.bundle_web import ARQUIVOS_EXEMPLOS, ARQUIVOS_MODULO, gera_bundle_web
+from portupy.bundle_web import (
+    ARQUIVOS_EXEMPLOS,
+    ARQUIVOS_MODULO,
+    aplica_integridade_service_worker,
+    bloco_integridade_pyodide,
+    gera_bundle_web,
+    hashes_pyodide_do_manifesto,
+)
 
 
 class TestBundleWeb(unittest.TestCase):
@@ -81,6 +88,16 @@ class TestBundleWeb(unittest.TestCase):
         self.assertIn('id="btn-tentar-novamente"', html)
         self.assertIn("copiaTexto", app)
         self.assertIn("botoesAbas", app)
+
+    def test_aplica_integridade_service_worker_substitui_o_bloco(self):
+        pasta_web = Path(__file__).resolve().parent.parent / "web"
+        hashes = hashes_pyodide_do_manifesto(pasta_web)
+        original = (pasta_web / "service-worker.js").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as diretorio_temp:
+            copia = Path(diretorio_temp) / "service-worker.js"
+            copia.write_text(original, encoding="utf-8")
+            aplica_integridade_service_worker(copia, hashes)
+            self.assertIn(bloco_integridade_pyodide(hashes), copia.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

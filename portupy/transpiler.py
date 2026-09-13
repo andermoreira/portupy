@@ -79,8 +79,13 @@ SINGLETONS_DE_IDENTIDADE = {"nulo", "None", "verdadeiro", "falso", "True", "Fals
 def _substitui_em_fstring(
     literal_fstring: str,
     protected_names: frozenset[str] = frozenset(),
+    traduzir_builtins: bool = False,
 ) -> str:
-    """Traduz expressões interpoladas dentro de f-strings para Python canônico."""
+    """Translate interpolations inside f-string STRING tokens (Python < 3.12).
+
+    Runtime (`traduzir_builtins=False`) still rewrites structural keywords so
+    `f"{nulo}"` becomes `f"{None}"`. Canonical export also rewrites builtins.
+    """
     quote_idx = -1
     for idx, c in enumerate(literal_fstring[:4]):
         if c in ('"', "'"):
@@ -202,9 +207,11 @@ def _substitui_em_fstring(
             try:
                 expr_traduzida = _transpila_core(
                     expr_bruta,
-                    traduzir_builtins=True,
+                    traduzir_builtins=traduzir_builtins,
                     protected_names=protected_names,
                 ).strip()
+            except ErroDeTraducao:
+                raise
             except Exception:
                 expr_traduzida = expr_bruta
 
@@ -375,10 +382,14 @@ def _transpila_core(
                     if not eh_tipo_embutido or eh_chamada_ou_anotacao:
                         valor = BUILTINS_CANONICOS[valor]
 
-        elif tipo == token.STRING and traduzir_builtins:
+        elif tipo == token.STRING:
+            # Pre-3.12 f-strings are a single STRING token. Without rewriting
+            # the interpolation, keywords like nulo survive into exec and
+            # become NameError. Builtins stay in Portuguese unless exporting.
             valor = _substitui_em_fstring(
                 valor,
                 names_protected_for(tok),
+                traduzir_builtins=traduzir_builtins,
             )
 
         # 5-tupla (com posições originais) faz o untokenize preservar o

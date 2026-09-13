@@ -1,6 +1,7 @@
 import contextlib
 import io
 import unittest
+from pathlib import Path
 
 from portupy.executor import executa_codigo, executa_arquivo
 
@@ -132,6 +133,31 @@ class TestExecutor(unittest.TestCase):
             status = executa_codigo(codigo)
         self.assertEqual(0, status)
         self.assertEqual("funciona\n", f.getvalue())
+
+    def test_executa_codigo_literais_em_fstring(self):
+        """Keywords inside f-strings must resolve at runtime on every supported Python."""
+        codigo = 'mostre(f"{nulo}")\nmostre(f"{verdadeiro}")\nmostre(f"{falso}")\n'
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            status = executa_codigo(codigo)
+        self.assertEqual(0, status, stderr.getvalue())
+        self.assertEqual("None\nTrue\nFalse\n", stdout.getvalue())
+
+    def test_todos_os_arquivos_de_exemplo(self):
+        pasta = Path(__file__).resolve().parent.parent / "portupy" / "exemplos"
+        esperam_erro = {"erro.ptpy", "erro_sintaxe.ptpy"}
+        for caminho in sorted(pasta.glob("*.ptpy")):
+            with self.subTest(exemplo=caminho.name):
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    status = executa_arquivo(str(caminho))
+                if caminho.name in esperam_erro:
+                    self.assertEqual(1, status, stderr.getvalue())
+                    self.assertNotIn("Traceback", stderr.getvalue())
+                else:
+                    self.assertEqual(0, status, stderr.getvalue())
 
 
 if __name__ == "__main__":

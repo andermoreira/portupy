@@ -30,7 +30,7 @@ jobs:
       - name: Verify generated bundle
         run: |
           python -m portupy.bundle_web
-          git diff --exit-code -- web/bundle_pt.js
+          git diff --exit-code -- web/bundle_pt.js web/service-worker.js
 
       - name: Setup Node
         uses: actions/setup-node@v4

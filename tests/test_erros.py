@@ -1,6 +1,11 @@
 import unittest
 
-from portupy.erros import formata_erro_amigavel, traduz_excecao
+from portupy.erros import (
+    EntradaIndisponivelError,
+    MENSAGEM_ENTRADA_PLAYGROUND,
+    formata_erro_amigavel,
+    traduz_excecao,
+)
 
 
 class TestErros(unittest.TestCase):
@@ -103,6 +108,16 @@ class TestErros(unittest.TestCase):
             mensagem = formata_erro_amigavel(exc, ["if True:", "print(1)"])
             self.assertIn("Na linha 2: print(1)", mensagem)
             self.assertIn("esperava que esta linha estivesse com recuo", mensagem)
+
+    def test_formata_entrada_indisponivel_sem_detalhe_tecnico(self):
+        mensagem = formata_erro_amigavel(
+            EntradaIndisponivelError(),
+            ['nome = leia("Seu nome: ")'],
+        )
+        self.assertIn("não funciona no playground", mensagem)
+        self.assertNotIn("ainda sem tradução", mensagem)
+        self.assertNotIn("Detalhe técnico", mensagem)
+        self.assertEqual(MENSAGEM_ENTRADA_PLAYGROUND, traduz_excecao(EntradaIndisponivelError()))
 
 
 if __name__ == "__main__":

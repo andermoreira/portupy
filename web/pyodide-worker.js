@@ -15,6 +15,33 @@ const PYODIDE_INDEX_URL = PYODIDE_ASSETS_ROOT;
 
 let pyodideInstance = null;
 
+function restringeApisPersistentesDoWorker() {
+  const recusar = () => Promise.reject(
+    new Error('A Cache Storage não está disponível no worker de execução.')
+  );
+  const cacheStorageStub = {
+    open: recusar,
+    match: recusar,
+    has: recusar,
+    delete: recusar,
+    keys: recusar,
+  };
+  try {
+    Object.defineProperty(self, 'caches', {
+      configurable: false,
+      enumerable: true,
+      get() {
+        return cacheStorageStub;
+      },
+    });
+  } catch (error) {
+    self.caches = cacheStorageStub;
+  }
+  self.importScripts = function importScriptsBloqueado() {
+    throw new Error('importScripts não está disponível após a inicialização do runtime.');
+  };
+}
+
 async function inicializaPyodide(sources) {
   if (typeof importScripts !== 'function') {
     throw new Error('O navegador não disponibiliza Web Workers para executar Python.');
@@ -26,6 +53,7 @@ async function inicializaPyodide(sources) {
   }
 
   pyodideInstance = await loadPyodide({ indexURL: PYODIDE_INDEX_URL });
+  restringeApisPersistentesDoWorker();
 
   if (!sources || Object.keys(sources).length === 0) {
     throw new Error('O bundle do Transpilador PT não foi carregado.');
@@ -46,23 +74,11 @@ import contextlib
 import io
 import json
 import portupy
-
-
-class EntradaIndisponivelError(Exception):
-    """Sinaliza uso de 'leia'/input no playground, onde não há entrada interativa."""
-
-
-_MENSAGEM_ENTRADA = (
-    "A leitura de entrada com 'leia' (input) não funciona no playground do "
-    "navegador, porque aqui não há teclado conectado ao programa como no "
-    "terminal. Para testar com entrada, rode este código na CLI "
-    "(python3 cli.py arquivo.ptpy) ou substitua a chamada por um valor fixo, "
-    "por exemplo: nome = 'Ana'."
-)
+from portupy.erros import EntradaIndisponivelError
 
 
 def _entrada_indisponivel(*args, **kwargs):
-    raise EntradaIndisponivelError(_MENSAGEM_ENTRADA)
+    raise EntradaIndisponivelError()
 
 
 # No navegador, 'leia'/input nao tem stdin interativo. Substituimos as duas

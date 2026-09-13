@@ -307,5 +307,26 @@ class TestFStringCanonica(unittest.TestCase):
         self.assertIn("{len(a)}", saida)
 
 
+class TestFStringRuntime(unittest.TestCase):
+    """Runtime must rewrite keywords inside pre-3.12 STRING f-tokens."""
+
+    def test_literais_em_fstring_viram_singletons_python(self):
+        casos = (
+            ('x = f"{nulo}"\n', "None", "nulo"),
+            ('x = f"{verdadeiro}"\n', "True", "verdadeiro"),
+            ('x = f"{falso}"\n', "False", "falso"),
+        )
+        for codigo_pt, esperado, original in casos:
+            with self.subTest(codigo_pt=codigo_pt):
+                codigo_py = transpila(codigo_pt)
+                self.assertIn(esperado, codigo_py)
+                self.assertNotIn(original, codigo_py)
+
+    def test_runtime_preserva_builtin_pedagogico_na_fstring(self):
+        codigo_py = transpila('mostre(f"{tamanho(nomes)}")')
+        self.assertIn("tamanho", codigo_py)
+        self.assertNotIn("len", codigo_py)
+
+
 if __name__ == "__main__":
     unittest.main()
