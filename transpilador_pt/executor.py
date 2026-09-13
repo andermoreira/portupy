@@ -8,6 +8,18 @@ from .transpiler import ErroDeTraducao, transpila
 
 
 def executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> int:
+    """Traduz e executa código-fonte em português no processo Python atual.
+
+    Segurança (decisão deliberada): a execução NÃO é isolada. O código roda com
+    `exec` no mesmo processo e com acesso aos builtins reais do Python (além dos
+    curados em `BUILTINS_PT`), permitindo `importe`, entrada/saída e acesso ao
+    sistema de arquivos — recursos necessários à missão pedagógica de servir como
+    rampa para o Python real (ver ADR-001/003). Restringir `__builtins__` daria
+    apenas uma falsa sensação de sandbox (é contornável) e mutilaria esses
+    recursos. Destina-se a scripts locais confiáveis, como `python3 arquivo.py`.
+    O isolamento de verdade fica a cargo do playground web, onde o Pyodide roda
+    em WebAssembly, fora do sistema do usuário. Ver também o aviso no README.
+    """
     linhas_fonte_pt = codigo_pt.splitlines()
 
     try:
@@ -25,6 +37,8 @@ def executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> int:
         # nome de arquivo especial: é assim que formata_erro_amigavel
         # reconhece qual frame do traceback pertence ao código do usuário
         compilado = compile(codigo_python, "<codigo_pt>", "exec")
+        # Sem '__builtins__' restrito: o Python injeta os builtins reais, o que é
+        # intencional (não é sandbox). Ver a docstring da função para o porquê.
         contexto = {"__name__": "__main__", **BUILTINS_PT}
         exec(compilado, contexto)
     except Exception as exc:
