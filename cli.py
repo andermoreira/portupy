@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Interface de linha de comando para o Transpilador PT.
+"""Interface de linha de comando para o PortuPy.
 
 Uso:
     python3 cli.py arquivo.ptpy [--mostrar-python] [--lado-a-lado] [--exportar [destino.py]]
@@ -12,14 +12,14 @@ import argparse
 import sys
 from pathlib import Path
 
-from transpilador_pt import (
+from portupy import (
     ErroDeTraducao,
     __version__,
     executa_arquivo,
     renderiza_lado_a_lado,
     transpila_canonico,
 )
-from transpilador_pt.servidor import inicia_servidor_web
+from portupy.servidor import inicia_servidor_web
 
 
 MENSAGEM_USO = (
@@ -40,7 +40,7 @@ def _porta_argumento(valor: str) -> int:
 
 def cria_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="transpilador-pt",
+        prog="portupy",
         description="Traduz e executa código Python escrito em português.",
     )
     parser.add_argument(

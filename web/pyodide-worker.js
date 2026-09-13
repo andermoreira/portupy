@@ -31,9 +31,9 @@ async function inicializaPyodide(sources) {
     throw new Error('O bundle do Transpilador PT não foi carregado.');
   }
 
-  pyodideInstance.FS.mkdirTree('/home/pyodide/transpilador_pt');
+  pyodideInstance.FS.mkdirTree('/home/pyodide/portupy');
   for (const [filename, content] of Object.entries(sources)) {
-    pyodideInstance.FS.writeFile(`/home/pyodide/transpilador_pt/${filename}`, content);
+    pyodideInstance.FS.writeFile(`/home/pyodide/portupy/${filename}`, content);
   }
 
   await pyodideInstance.runPythonAsync(`
@@ -44,7 +44,7 @@ if '/home/pyodide' not in sys.path:
 import contextlib
 import io
 import json
-import transpilador_pt
+import portupy
 
 def _processa_codigo_web(codigo_pt):
     resultado = {
@@ -56,12 +56,12 @@ def _processa_codigo_web(codigo_pt):
     }
 
     try:
-        resultado["canonico"] = transpilador_pt.transpila_canonico(codigo_pt)
+        resultado["canonico"] = portupy.transpila_canonico(codigo_pt)
     except Exception as exc:
         resultado["canonico"] = f"# Erro ao gerar Python canonico: {exc}"
 
     try:
-        resultado["lado_a_lado"] = transpilador_pt.renderiza_lado_a_lado(
+        resultado["lado_a_lado"] = portupy.renderiza_lado_a_lado(
             codigo_pt,
             resultado["canonico"],
             largura_terminal=80
@@ -73,7 +73,7 @@ def _processa_codigo_web(codigo_pt):
     stderr_buf = io.StringIO()
     with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
         try:
-            resultado["status"] = transpilador_pt.executa_codigo(codigo_pt)
+            resultado["status"] = portupy.executa_codigo(codigo_pt)
         except Exception as exc:
             resultado["status"] = 1
             stderr_buf.write(f"Excecao inesperada: {exc}\\n")

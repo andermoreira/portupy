@@ -35,7 +35,7 @@ class TestCLI(unittest.TestCase):
         with patch.object(sys, "argv", ["cli.py", "--help"]), contextlib.redirect_stdout(stdout):
             status = cli.main()
         self.assertEqual(0, status)
-        self.assertIn("transpilador-pt", stdout.getvalue())
+        self.assertIn("portupy", stdout.getvalue())
         self.assertIn("--exportar", stdout.getvalue())
 
     def test_cli_exibe_versao(self):
@@ -44,7 +44,7 @@ class TestCLI(unittest.TestCase):
         with patch.object(sys, "argv", ["cli.py", "--version"]), contextlib.redirect_stdout(stdout):
             status = cli.main()
         self.assertEqual(0, status)
-        self.assertIn("transpilador-pt 0.1.0", stdout.getvalue())
+        self.assertIn("portupy 0.1.0", stdout.getvalue())
 
     def test_cli_executa_arquivo_padrao(self):
         """CLI executa o arquivo e retorna 0."""

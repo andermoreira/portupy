@@ -1,4 +1,4 @@
-const CACHE_NAME = 'transpilador-pt-shell-v3';
+const CACHE_NAME = 'portupy-shell-v1';
 // Assets versionados e imutáveis (o caminho carrega a versão do Pyodide).
 // Servi-los cache-first evita rebaixar o runtime pesado (.wasm/.zip) a cada
 // reabertura online; só a rede é consultada quando ainda não estão em cache.

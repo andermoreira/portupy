@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from transpilador_pt.bundle_web import ARQUIVOS_EXEMPLOS, ARQUIVOS_MODULO, gera_bundle_web
+from portupy.bundle_web import ARQUIVOS_EXEMPLOS, ARQUIVOS_MODULO, gera_bundle_web
 
 
 class TestBundleWeb(unittest.TestCase):
@@ -29,9 +29,9 @@ class TestBundleWeb(unittest.TestCase):
             )
             return correspondencia.group(1)
 
-        fontes_bundle = json.loads(extrai_bloco("TRANSPILADOR_PT_SOURCES"))
-        exemplos_bundle = json.loads(extrai_bloco("TRANSPILADOR_PT_EXEMPLOS"))
-        pasta_modulo = Path(__file__).resolve().parent.parent / "transpilador_pt"
+        fontes_bundle = json.loads(extrai_bloco("PORTUPY_SOURCES"))
+        exemplos_bundle = json.loads(extrai_bloco("PORTUPY_EXEMPLOS"))
+        pasta_modulo = Path(__file__).resolve().parent.parent / "portupy"
 
         self.assertEqual(set(ARQUIVOS_MODULO), set(fontes_bundle))
         for nome_arquivo in ARQUIVOS_MODULO:
@@ -47,9 +47,9 @@ class TestBundleWeb(unittest.TestCase):
             self.assertEqual(exemplo_atual, exemplos_bundle[Path(nome_arquivo).stem])
 
         # Os grupos de realce expostos ao playground devem refletir a fonte única.
-        from transpilador_pt.dicionario import conjuntos_de_destaque
+        from portupy.dicionario import conjuntos_de_destaque
 
-        destaque_bundle = json.loads(extrai_bloco("TRANSPILADOR_PT_DESTAQUE"))
+        destaque_bundle = json.loads(extrai_bloco("PORTUPY_DESTAQUE"))
         self.assertEqual(conjuntos_de_destaque(), destaque_bundle)
 
     def test_bundle_versionado_esta_atualizado(self):

@@ -1,6 +1,6 @@
 import unittest
-from transpilador_pt.transpiler import transpila, transpila_canonico, ErroDeTraducao
-from transpilador_pt.dicionario import BUILTINS_CANONICOS, BUILTINS_PT
+from portupy.transpiler import transpila, transpila_canonico, ErroDeTraducao
+from portupy.dicionario import BUILTINS_CANONICOS, BUILTINS_PT
 
 
 

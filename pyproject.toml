@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "transpilador-pt"
+name = "portupy"
 dynamic = ["version"]
-description = "Transpilador Python-em-português com CLI e playground WebAssembly"
+description = "PortuPy: Python escrito em português, com CLI e playground WebAssembly"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -22,20 +22,20 @@ classifiers = [
 ]
 
 [project.scripts]
-transpilador-pt = "cli:main"
+portupy = "cli:main"
 
 [tool.setuptools]
 include-package-data = true
 py-modules = ["cli"]
 
 [tool.setuptools.dynamic]
-version = { attr = "transpilador_pt.__version__" }
+version = { attr = "portupy.__version__" }
 
 [tool.setuptools.packages.find]
-include = ["transpilador_pt*", "web"]
+include = ["portupy*", "web"]
 
 [tool.setuptools.package-data]
-transpilador_pt = ["exemplos/*.ptpy"]
+portupy = ["exemplos/*.ptpy"]
 web = [
   "*.html",
   "*.css",

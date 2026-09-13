@@ -1,6 +1,6 @@
 import unittest
 
-from transpilador_pt.erros import formata_erro_amigavel, traduz_excecao
+from portupy.erros import formata_erro_amigavel, traduz_excecao
 
 
 class TestErros(unittest.TestCase):

@@ -65,7 +65,7 @@ def executa_arquivo(caminho: str, mostrar_python: bool = False) -> int:
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print(
-            "Uso: python -m transpilador_pt.executor arquivo.ptpy [--mostrar-python]",
+            "Uso: python -m portupy.executor arquivo.ptpy [--mostrar-python]",
             file=sys.stderr,
         )
         sys.exit(1)

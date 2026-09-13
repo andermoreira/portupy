@@ -400,7 +400,7 @@ def transpila_canonico(codigo_pt: str) -> str:
     """Converte código-fonte em português para código Python canônico e autônomo (ADR-003).
 
     Substitui tanto a sintaxe estrutural quanto nomes de funções embutidas (mostre -> print,
-    tamanho -> len, etc.), permitindo execução pura sem necessidade do pacote transpilador_pt.
+    tamanho -> len, etc.), permitindo execução pura sem necessidade do pacote portupy.
     """
     return _transpila_core(codigo_pt, traduzir_builtins=True)
 

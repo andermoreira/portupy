@@ -7,7 +7,7 @@
 
   // --- Catálogo de Exemplos Didáticos --------------------------------------
   // O bundle é a fonte única compartilhada pela CLI e pelo playground.
-  const EXEMPLOS = window.TRANSPILADOR_PT_EXEMPLOS || {};
+  const EXEMPLOS = window.PORTUPY_EXEMPLOS || {};
 
   // --- Elementos do DOM ----------------------------------------------------
   const editor = document.getElementById('code-editor');
@@ -54,10 +54,10 @@
   }
 
   // Os grupos de realce vêm do bundle, derivados da fonte única em
-  // transpilador_pt/dicionario.py, evitando listas paralelas mantidas à mão.
+  // portupy/dicionario.py, evitando listas paralelas mantidas à mão.
   // O fallback cobre apenas o caso do bundle não expor os grupos (ex.: bundle
   // antigo em cache), preservando um realce mínimo funcional.
-  const DESTAQUE = window.TRANSPILADOR_PT_DESTAQUE || {};
+  const DESTAQUE = window.PORTUPY_DESTAQUE || {};
   const PALAVRAS_CHAVE_DESTAQUE = new Set(DESTAQUE.palavrasChave || [
     'se', 'senao', 'senão', 'senaose', 'senãose', 'ouse', 'para',
     'enquanto', 'funcao', 'função', 'retorne', 'classe', 'importe',
@@ -432,7 +432,7 @@
 
     worker.postMessage({
       type: 'init',
-      sources: window.TRANSPILADOR_PT_SOURCES || {}
+      sources: window.PORTUPY_SOURCES || {}
     });
 
     return workerInitPromise;

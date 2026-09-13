@@ -1,6 +1,6 @@
 import unittest
 
-from transpilador_pt.transicao import renderiza_lado_a_lado
+from portupy.transicao import renderiza_lado_a_lado
 
 
 class TestTransicao(unittest.TestCase):
