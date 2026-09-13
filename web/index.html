@@ -85,16 +85,19 @@
 
       <div class="editor-container" id="editor-wrapper">
         <div class="line-numbers" id="line-numbers" aria-hidden="true">1</div>
-        <textarea 
-          id="code-editor" 
-          class="code-textarea" 
-          spellcheck="false" 
-          autocorrect="off" 
-          autocapitalize="off" 
-          autocomplete="off"
-          placeholder="Digite seu código em português aqui..."
-          aria-label="Área de edição de código em português"
-        ></textarea>
+        <div class="editor-code-area" id="editor-code-area">
+          <pre class="syntax-highlight" id="syntax-highlight" aria-hidden="true"><code id="syntax-highlight-code"></code></pre>
+          <textarea
+            id="code-editor"
+            class="code-textarea"
+            spellcheck="false"
+            autocorrect="off"
+            autocapitalize="off"
+            autocomplete="off"
+            placeholder="Digite seu código em português aqui..."
+            aria-label="Área de edição de código em português"
+          ></textarea>
+        </div>
       </div>
 
       <div class="panel-footer editor-footer">

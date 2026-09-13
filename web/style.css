@@ -400,24 +400,104 @@ body {
   padding-right: 12px;
 }
 
-.code-textarea {
+.editor-code-area {
   flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.syntax-highlight,
+.code-textarea {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   background: transparent;
   border: none;
-  outline: none;
   padding: 16px;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 22px;
-  color: #e2e8f0;
-  resize: none;
   white-space: pre;
   overflow: auto;
   tab-size: 4;
 }
 
+.syntax-highlight {
+  margin: 0;
+  color: #e2e8f0;
+  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.syntax-highlight::-webkit-scrollbar {
+  display: none;
+}
+
+.syntax-highlight code {
+  font: inherit;
+}
+
+.code-textarea {
+  z-index: 1;
+  outline: none;
+  color: #e2e8f0;
+  resize: none;
+}
+
+.syntax-highlight-enabled .code-textarea {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--text-primary);
+}
+
+.syntax-highlight-enabled .code-textarea::selection {
+  background: rgba(56, 189, 248, 0.28);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.syntax-keyword {
+  color: #f472b6;
+}
+
+.syntax-builtin {
+  color: #38bdf8;
+}
+
+.syntax-boolean {
+  color: #fb7185;
+}
+
+.syntax-string {
+  color: #fbbf24;
+}
+
+.syntax-number {
+  color: #c084fc;
+}
+
+.syntax-comment {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.syntax-function {
+  color: #34d399;
+}
+
+.syntax-operator {
+  color: #94a3b8;
+}
+
+.syntax-punctuation {
+  color: #cbd5e1;
+}
+
 .code-textarea::placeholder {
   color: var(--text-muted);
+  -webkit-text-fill-color: var(--text-muted);
   font-style: italic;
 }
 

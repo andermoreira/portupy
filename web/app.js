@@ -115,6 +115,9 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   const terminalOutput = document.getElementById('terminal-output');
   const bilingueOutput = document.getElementById('bilingue-output');
   const canonicoOutput = document.getElementById('canonico-output');
+  const editorCodeArea = document.getElementById('editor-code-area');
+  const syntaxHighlight = document.getElementById('syntax-highlight');
+  const syntaxHighlightCode = document.getElementById('syntax-highlight-code');
 
   const TEMPO_MAX_EXECUCAO_MS = 10000;
   let pyodideWorker = null;
@@ -129,6 +132,134 @@ mostre(f"Menor valor: {minimo(quadrados)}")
     linha.textContent = texto;
     terminalOutput.replaceChildren(linha);
   }
+
+  const PALAVRAS_CHAVE_DESTAQUE = new Set([
+    'se', 'senao', 'senão', 'senaose', 'senãose', 'ouse', 'para',
+    'enquanto', 'funcao', 'função', 'retorne', 'classe', 'importe',
+    'de', 'como', 'com', 'tente', 'exceto', 'finalmente', 'levante',
+    'quebre', 'continue', 'passe', 'em', 'nao', 'não', 'e', 'ou',
+    'lambda', 'global', 'assincrono', 'aguarde', 'produza', 'del',
+    'assert', 'def', 'if', 'else', 'elif', 'for', 'while', 'return',
+    'class', 'import', 'from', 'as', 'with', 'try', 'except', 'finally',
+    'raise', 'break', 'yield', 'async', 'await'
+  ]);
+  const BUILTINS_DESTAQUE = new Set([
+    'mostre', 'leia', 'tamanho', 'intervalo', 'some', 'maximo', 'minimo',
+    'abs', 'arredonde', 'lista', 'dicionario', 'dicionário', 'conjunto',
+    'tupla', 'texto', 'inteiro', 'decimal', 'booleano', 'print', 'input',
+    'len', 'range', 'sum', 'max', 'min', 'dict', 'set', 'tuple', 'str',
+    'int', 'float', 'bool', 'enumerate', 'zip', 'sorted'
+  ]);
+  const BOOLEANOS_DESTAQUE = new Set([
+    'verdadeiro', 'falso', 'nulo', 'True', 'False', 'None'
+  ]);
+
+  function escapaHtml(texto) {
+    return texto.replace(/[&<>"']/g, (caractere) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[caractere]));
+  }
+
+  function marcaToken(classe, token) {
+    return `<span class="syntax-${classe}">${escapaHtml(token)}</span>`;
+  }
+
+  function encontraFimString(codigo, inicioAspas) {
+    const delimitador = codigo.startsWith('"""', inicioAspas)
+      ? '"""'
+      : codigo.startsWith("'''", inicioAspas) ? "'''" : codigo[inicioAspas];
+    let indice = inicioAspas + delimitador.length;
+
+    while (indice < codigo.length) {
+      if (codigo[indice] === '\\') {
+        indice += 2;
+      } else if (codigo.startsWith(delimitador, indice)) {
+        return indice + delimitador.length;
+      } else {
+        indice += 1;
+      }
+    }
+    return codigo.length;
+  }
+
+  function atualizaSyntaxHighlight() {
+    const codigo = editor.value;
+    let html = '';
+    let indice = 0;
+
+    while (indice < codigo.length) {
+      const trecho = codigo.slice(indice);
+      const prefixoString = trecho.match(/^(?:[fFrRbBuU]{1,2})(?:"""|'''|"|')/);
+      const aspasDiretas = trecho.match(/^(?:"""|'''|"|')/);
+
+      if (prefixoString || aspasDiretas) {
+        const abertura = prefixoString ? prefixoString[0] : aspasDiretas[0];
+        const deslocamentoAspas = prefixoString ? abertura.search(/["']/) : 0;
+        const fim = encontraFimString(codigo, indice + deslocamentoAspas);
+        html += marcaToken('string', codigo.slice(indice, fim));
+        indice = fim;
+        continue;
+      }
+
+      if (codigo[indice] === '#') {
+        const fimLinha = codigo.indexOf('\n', indice);
+        const fim = fimLinha === -1 ? codigo.length : fimLinha;
+        html += marcaToken('comment', codigo.slice(indice, fim));
+        indice = fim;
+        continue;
+      }
+
+      const numero = trecho.match(/^(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);
+      if (numero) {
+        html += marcaToken('number', numero[0]);
+        indice += numero[0].length;
+        continue;
+      }
+
+      const identificador = trecho.match(/^[A-Za-zÀ-ÿ_][A-Za-z0-9À-ÿ_]*/);
+      if (identificador) {
+        const token = identificador[0];
+        const depois = codigo.slice(indice + token.length);
+        let classe = '';
+        if (BOOLEANOS_DESTAQUE.has(token)) {
+          classe = 'boolean';
+        } else if (PALAVRAS_CHAVE_DESTAQUE.has(token)) {
+          classe = 'keyword';
+        } else if (BUILTINS_DESTAQUE.has(token)) {
+          classe = 'builtin';
+        } else if (/^\s*\(/.test(depois)) {
+          classe = 'function';
+        }
+        html += classe ? marcaToken(classe, token) : escapaHtml(token);
+        indice += token.length;
+        continue;
+      }
+
+      const operador = trecho.match(/^(?:==|!=|<=|>=|\*\*|\/\/|->|:=|[+\-*/%<>=])/);
+      if (operador) {
+        html += marcaToken('operator', operador[0]);
+        indice += operador[0].length;
+        continue;
+      }
+
+      if (/^[()[\]{},.:;]/.test(trecho)) {
+        html += marcaToken('punctuation', codigo[indice]);
+        indice += 1;
+        continue;
+      }
+
+      html += escapaHtml(codigo[indice]);
+      indice += 1;
+    }
+
+    syntaxHighlightCode.innerHTML = html;
+  }
+
+  editorCodeArea.classList.add('syntax-highlight-enabled');
 
   // --- Sincronização e Linhas do Editor ------------------------------------
   function atualizaLinhas() {
@@ -148,6 +279,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   editor.addEventListener('input', () => {
     atualizaLinhas();
     atualizaCursorStats();
+    atualizaSyntaxHighlight();
   });
 
   editor.addEventListener('click', atualizaCursorStats);
@@ -155,6 +287,8 @@ mostre(f"Menor valor: {minimo(quadrados)}")
 
   editor.addEventListener('scroll', () => {
     lineNumbers.scrollTop = editor.scrollTop;
+    syntaxHighlight.scrollTop = editor.scrollTop;
+    syntaxHighlight.scrollLeft = editor.scrollLeft;
   });
 
   // Trata tecla Tab (insere 4 espaços)
@@ -232,6 +366,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
     editor.value = '';
     atualizaLinhas();
     atualizaCursorStats();
+    atualizaSyntaxHighlight();
     defineSaidaTerminal('terminal-system', '[Editor limpo. Digite ou escolha um exemplo acima.]');
     bilingueOutput.textContent = 'Execute o código para visualizar a comparação lado a lado.';
     canonicoOutput.textContent = '# O código Python puro canônico aparecerá aqui após a transpilação.';
@@ -246,6 +381,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
       editor.value = EXEMPLOS[chave];
       atualizaLinhas();
       atualizaCursorStats();
+      atualizaSyntaxHighlight();
       if (workerReady && !btnExecutar.disabled) {
         executaCodigo();
       }
@@ -461,6 +597,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   editor.value = EXEMPLOS.ola;
   atualizaLinhas();
   atualizaCursorStats();
+  atualizaSyntaxHighlight();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js').catch((err) => {

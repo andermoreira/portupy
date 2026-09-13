@@ -44,6 +44,9 @@ class TestBundleWeb(unittest.TestCase):
             self.assertTrue((pasta_web / nome_arquivo).is_file())
             self.assertIn(nome_arquivo, html + app)
 
+        self.assertIn('id="syntax-highlight"', html)
+        self.assertIn("atualizaSyntaxHighlight", app)
+
 
 if __name__ == "__main__":
     unittest.main()
