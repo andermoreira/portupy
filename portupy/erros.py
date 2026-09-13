@@ -31,6 +31,8 @@ MENSAGEM_ENTRADA_PLAYGROUND = (
 class EntradaIndisponivelError(Exception):
     """Raised in the web playground when input()/leia() has no stdin."""
 
+    rotulo = "entrada indisponível"
+
     def __init__(self, mensagem: str | None = None) -> None:
         super().__init__(mensagem or MENSAGEM_ENTRADA_PLAYGROUND)
 
@@ -239,7 +241,10 @@ def formata_erro_amigavel(
                 linha_numero = tb.tb_lineno
             tb = tb.tb_next
 
-    partes = [f"⚠️  Deu erro do tipo: {type(exc).__name__}"]
+    partes = [
+        "⚠️  Deu erro do tipo: "
+        f"{exc.rotulo if isinstance(exc, EntradaIndisponivelError) else type(exc).__name__}"
+    ]
     if linha_numero and 1 <= linha_numero <= len(linhas_fonte_pt):
         trecho = linhas_fonte_pt[linha_numero - 1]
         prefixo_trecho = f"   Na linha {linha_numero}: "

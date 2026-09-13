@@ -72,11 +72,17 @@ portupy/
 ├── bundle_web.py   # gerador do payload dos fontes para o ambiente WebAssembly
 └── exemplos/
     ├── ola.ptpy
-    ├── erro.ptpy
-    ├── erro_sintaxe.ptpy
     ├── condicionais.ptpy
+    ├── erro_sintaxe.ptpy
+    ├── erro.ptpy
     ├── loop.ptpy
-    └── funcoes.ptpy
+    ├── funcoes.ptpy
+    ├── enquanto.ptpy
+    ├── classes.ptpy
+    ├── tratamento_erros.ptpy
+    ├── fizzbuzz.ptpy
+    ├── fibonacci.ptpy
+    └── textos.ptpy
 web/                # Playground Web 100% client-side com Pyodide (Wasm)
 ├── index.html      # interface com editor, console e abas bilíngues
 ├── style.css       # design system dark mode moderno com Rich Aesthetics

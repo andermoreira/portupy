@@ -204,16 +204,11 @@ def _substitui_em_fstring(
                 fim_expr = j
             expr_bruta = miolo[inicio:fim_expr]
 
-            try:
-                expr_traduzida = _transpila_core(
-                    expr_bruta,
-                    traduzir_builtins=traduzir_builtins,
-                    protected_names=protected_names,
-                ).strip()
-            except ErroDeTraducao:
-                raise
-            except Exception:
-                expr_traduzida = expr_bruta
+            expr_traduzida = _transpila_core(
+                expr_bruta,
+                traduzir_builtins=traduzir_builtins,
+                protected_names=protected_names,
+            ).strip()
 
             resultado.append("{" + expr_traduzida + sufixo + "}")
             i = j + 1

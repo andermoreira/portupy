@@ -50,6 +50,16 @@ class TestWebAssets(unittest.TestCase):
         self.assertIn("restringeApisPersistentesDoWorker", worker)
         self.assertIn("importScriptsBloqueado", worker)
 
+    def test_seletor_do_playground_lista_todos_os_exemplos(self):
+        import re
+
+        from portupy.bundle_web import ARQUIVOS_EXEMPLOS
+
+        html = (self.pasta_web / "index.html").read_text(encoding="utf-8")
+        valores = set(re.findall(r'<option value="([^"]+)"', html))
+        esperados = {Path(nome).stem for nome in ARQUIVOS_EXEMPLOS}
+        self.assertEqual(esperados, valores)
+
 
 if __name__ == "__main__":
     unittest.main()

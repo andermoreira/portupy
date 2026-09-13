@@ -145,4 +145,7 @@ test('explica de forma amigável que a entrada com leia não funciona no navegad
   await expect(page.locator('#terminal-output')).not.toContainText(
     'ainda sem tradução'
   );
+  await expect(page.locator('#terminal-output')).not.toContainText(
+    'EntradaIndisponivelError'
+  );
 });

@@ -117,6 +117,8 @@ class TestErros(unittest.TestCase):
         self.assertIn("não funciona no playground", mensagem)
         self.assertNotIn("ainda sem tradução", mensagem)
         self.assertNotIn("Detalhe técnico", mensagem)
+        self.assertNotIn("EntradaIndisponivelError", mensagem)
+        self.assertIn("entrada indisponível", mensagem)
         self.assertEqual(MENSAGEM_ENTRADA_PLAYGROUND, traduz_excecao(EntradaIndisponivelError()))
 
 

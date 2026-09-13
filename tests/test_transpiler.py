@@ -327,6 +327,10 @@ class TestFStringRuntime(unittest.TestCase):
         self.assertIn("tamanho", codigo_py)
         self.assertNotIn("len", codigo_py)
 
+    def test_palavra_reservada_em_fstring_nao_e_engolida(self):
+        with self.assertRaises(ErroDeTraducao):
+            transpila('x = f"{(se := 1)}"\n')
+
 
 if __name__ == "__main__":
     unittest.main()

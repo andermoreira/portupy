@@ -17,8 +17,9 @@ def executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> int:
     rampa para o Python real (ver ADR-001/003). Restringir `__builtins__` daria
     apenas uma falsa sensação de sandbox (é contornável) e mutilaria esses
     recursos. Destina-se a scripts locais confiáveis, como `python3 arquivo.py`.
-    O isolamento de verdade fica a cargo do playground web, onde o Pyodide roda
-    em WebAssembly, fora do sistema do usuário. Ver também o aviso no README.
+    No playground web o código roda em WebAssembly no navegador do aluno, fora
+    do sistema de arquivos da máquina — isso reduz a superfície da CLI, mas não
+    é garantia absoluta de sandbox (ver ADR-004). Ver também o aviso no README.
     """
     linhas_fonte_pt = codigo_pt.splitlines()
 
