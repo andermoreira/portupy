@@ -119,3 +119,21 @@ test('mantém o playground utilizável em viewport estreito', async ({ page }) =
   await expect(page.locator('#select-exemplo')).toBeVisible();
   await expect(page.locator('#code-editor')).toBeVisible();
 });
+
+test('explica de forma amigável que a entrada com leia não funciona no navegador', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.locator('#status-text')).toHaveText('Python Pronto (Wasm)', {
+    timeout: 120000,
+  });
+  await expect(page.locator('#btn-executar')).toBeEnabled();
+
+  await page.locator('#code-editor').fill('nome = leia("Seu nome: ")\nmostre(nome)');
+  await page.getByRole('button', { name: /Executar/ }).click();
+
+  // Em vez de um EOFError cru, o playground mostra a explicação em português.
+  await expect(page.locator('#terminal-output')).toContainText(
+    'não funciona no playground',
+    { timeout: 15000 }
+  );
+});

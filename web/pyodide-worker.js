@@ -41,10 +41,36 @@ import sys
 if '/home/pyodide' not in sys.path:
     sys.path.insert(0, '/home/pyodide')
 
+import builtins
 import contextlib
 import io
 import json
 import portupy
+
+
+class EntradaIndisponivelError(Exception):
+    """Sinaliza uso de 'leia'/input no playground, onde não há entrada interativa."""
+
+
+_MENSAGEM_ENTRADA = (
+    "A leitura de entrada com 'leia' (input) não funciona no playground do "
+    "navegador, porque aqui não há teclado conectado ao programa como no "
+    "terminal. Para testar com entrada, rode este código na CLI "
+    "(python3 cli.py arquivo.ptpy) ou substitua a chamada por um valor fixo, "
+    "por exemplo: nome = 'Ana'."
+)
+
+
+def _entrada_indisponivel(*args, **kwargs):
+    raise EntradaIndisponivelError(_MENSAGEM_ENTRADA)
+
+
+# No navegador, 'leia'/input nao tem stdin interativo. Substituimos as duas
+# referencias (o builtin e a entrada curada em portupy) por uma versao que
+# explica a limitacao em portugues, em vez de estourar EOFError/OSError cru.
+builtins.input = _entrada_indisponivel
+portupy.dicionario.BUILTINS_PT["leia"] = _entrada_indisponivel
+
 
 def _processa_codigo_web(codigo_pt):
     resultado = {
