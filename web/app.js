@@ -116,8 +116,19 @@ mostre(f"Menor valor: {minimo(quadrados)}")
   const bilingueOutput = document.getElementById('bilingue-output');
   const canonicoOutput = document.getElementById('canonico-output');
 
-  let pyodideInstance = null;
+  const TEMPO_MAX_EXECUCAO_MS = 10000;
+  let pyodideWorker = null;
+  let workerReady = false;
+  let workerInitPromise = null;
+  let pendingExecution = null;
   let abaAtiva = 'terminal';
+
+  function defineSaidaTerminal(classe, texto) {
+    const linha = document.createElement('div');
+    linha.className = `terminal-line ${classe}`;
+    linha.textContent = texto;
+    terminalOutput.replaceChildren(linha);
+  }
 
   // --- Sincronização e Linhas do Editor ------------------------------------
   function atualizaLinhas() {
@@ -221,7 +232,7 @@ mostre(f"Menor valor: {minimo(quadrados)}")
     editor.value = '';
     atualizaLinhas();
     atualizaCursorStats();
-    terminalOutput.innerHTML = '<div class="terminal-line terminal-system">[Editor limpo. Digite ou escolha um exemplo acima.]</div>';
+    defineSaidaTerminal('terminal-system', '[Editor limpo. Digite ou escolha um exemplo acima.]');
     bilingueOutput.textContent = 'Execute o código para visualizar a comparação lado a lado.';
     canonicoOutput.textContent = '# O código Python puro canônico aparecerá aqui após a transpilação.';
     outputStatus.textContent = 'Status: Pronto';
@@ -235,118 +246,152 @@ mostre(f"Menor valor: {minimo(quadrados)}")
       editor.value = EXEMPLOS[chave];
       atualizaLinhas();
       atualizaCursorStats();
-      if (pyodideInstance && !btnExecutar.disabled) {
+      if (workerReady && !btnExecutar.disabled) {
         executaCodigo();
       }
     }
   });
 
-  // --- Inicialização do Pyodide e Montagem do Módulo -----------------------
-  async function inicializaPyodide() {
+  // --- Inicialização do Worker/Pyodide e Montagem do Módulo ----------------
+  function encerraWorker() {
+    if (pyodideWorker) {
+      pyodideWorker.terminate();
+    }
+    pyodideWorker = null;
+    workerReady = false;
+    workerInitPromise = null;
+  }
+
+  function inicializaWorker() {
+    encerraWorker();
+
+    const worker = new Worker('pyodide-worker.js');
+    pyodideWorker = worker;
+    let resolveReady;
+    let rejectReady;
+    workerInitPromise = new Promise((resolve, reject) => {
+      resolveReady = resolve;
+      rejectReady = reject;
+    });
+
+    worker.addEventListener('message', (event) => {
+      const mensagem = event.data || {};
+
+      if (mensagem.type === 'ready') {
+        workerReady = true;
+        resolveReady();
+        return;
+      }
+
+      if (mensagem.type === 'result' && pendingExecution) {
+        const execucao = pendingExecution;
+        pendingExecution = null;
+        clearTimeout(execucao.timeoutId);
+        execucao.resolve(mensagem.resultado);
+        return;
+      }
+
+      if (mensagem.type === 'error') {
+        const erro = new Error(mensagem.message || 'Falha inesperada no Worker Python.');
+        if (!workerReady) {
+          rejectReady(erro);
+        } else if (pendingExecution) {
+          const execucao = pendingExecution;
+          pendingExecution = null;
+          clearTimeout(execucao.timeoutId);
+          execucao.reject(erro);
+        }
+        encerraWorker();
+      }
+    });
+
+    worker.addEventListener('error', (event) => {
+      const erro = new Error(event.message || 'Falha inesperada no Worker Python.');
+      if (!workerReady) {
+        rejectReady(erro);
+      } else if (pendingExecution) {
+        const execucao = pendingExecution;
+        pendingExecution = null;
+        clearTimeout(execucao.timeoutId);
+        execucao.reject(erro);
+      }
+      encerraWorker();
+    });
+
+    worker.postMessage({
+      type: 'init',
+      sources: window.TRANSPILADOR_PT_SOURCES || {}
+    });
+
+    return workerInitPromise;
+  }
+
+  async function inicializaPyodide({ executarInicial = true } = {}) {
     btnExecutar.disabled = true;
     statusDot.className = 'status-dot status-loading';
     statusText.textContent = 'Baixando Python Wasm...';
 
     try {
-      if (typeof loadPyodide !== 'function') {
-        throw new Error('A biblioteca Pyodide não foi carregada pelo navegador.');
-      }
-
-      pyodideInstance = await loadPyodide();
+      await inicializaWorker();
 
       statusText.textContent = 'Montando Transpilador PT...';
-
-      // Cria a pasta do módulo no filesystem virtual
-      pyodideInstance.FS.mkdirTree('/home/pyodide/transpilador_pt');
-
-      // Grava os fontes se estiverem disponíveis no bundle
-      if (window.TRANSPILADOR_PT_SOURCES) {
-        for (const [filename, content] of Object.entries(window.TRANSPILADOR_PT_SOURCES)) {
-          pyodideInstance.FS.writeFile(`/home/pyodide/transpilador_pt/${filename}`, content);
-        }
-      }
-
-      // Adiciona ao sys.path e importa o pacote
-      await pyodideInstance.runPythonAsync(`
-import sys
-if '/home/pyodide' not in sys.path:
-    sys.path.insert(0, '/home/pyodide')
-
-import json
-import transpilador_pt
-
-def _processa_codigo_web(codigo_pt):
-    resultado = {
-        "status": 0,
-        "stdout": "",
-        "stderr": "",
-        "canonico": "",
-        "lado_a_lado": ""
-    }
-    
-    # 1. Transpilação canônica
-    try:
-        canonico = transpilador_pt.transpila_canonico(codigo_pt)
-        resultado["canonico"] = canonico
-    except Exception as exc:
-        resultado["canonico"] = f"# Erro ao gerar Python canonico: {exc}"
-
-    # 2. Renderização lado a lado
-    try:
-        resultado["lado_a_lado"] = transpilador_pt.renderiza_lado_a_lado(
-            codigo_pt, 
-            resultado["canonico"], 
-            largura_terminal=80
-        )
-    except Exception as exc:
-        resultado["lado_a_lado"] = f"Erro na visualizacao lado a lado: {exc}"
-
-    # 3. Execução in-process com captura de stdout/stderr
-    import io, contextlib
-    stdout_buf = io.StringIO()
-    stderr_buf = io.StringIO()
-
-    with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
-        try:
-            status_code = transpilador_pt.executa_codigo(codigo_pt)
-            resultado["status"] = status_code
-        except Exception as exc:
-            resultado["status"] = 1
-            stderr_buf.write(f"Excecao inesperada: {exc}\\n")
-
-    resultado["stdout"] = stdout_buf.getvalue()
-    resultado["stderr"] = stderr_buf.getvalue()
-    return json.dumps(resultado)
-`);
 
       statusDot.className = 'status-dot status-ready';
       statusText.textContent = 'Python Pronto (Wasm)';
       btnExecutar.disabled = false;
 
       // Executa o exemplo inicial
-      executaCodigo();
+      if (executarInicial) {
+        executaCodigo();
+      }
 
     } catch (err) {
       console.error('Erro ao inicializar Pyodide:', err);
+      encerraWorker();
       statusDot.className = 'status-dot status-error';
       statusText.textContent = 'Falha ao carregar Python';
-      terminalOutput.innerHTML = `
-        <div class="terminal-line terminal-stderr">
-          ⚠️ Não foi possível inicializar o ambiente Python no navegador:
-          <br>${err.message}
-          <br><br>Verifique sua conexão com a internet para carregar o runtime WebAssembly.
-        </div>
-      `;
+      defineSaidaTerminal(
+        'terminal-stderr',
+        `⚠️ Não foi possível inicializar o ambiente Python no navegador.\n${err.message}\n\nVerifique sua conexão com a internet para carregar o runtime WebAssembly.`
+      );
     }
   }
 
   // --- Execução de Código --------------------------------------------------
+  function solicitaExecucao(codigo) {
+    if (!pyodideWorker || !workerReady) {
+      return Promise.reject(new Error('O ambiente Python ainda não está pronto.'));
+    }
+
+    return new Promise((resolve, reject) => {
+      const execucao = { resolve, reject, timeoutId: null };
+      execucao.timeoutId = setTimeout(() => {
+        if (pendingExecution !== execucao) return;
+        pendingExecution = null;
+        encerraWorker();
+        const erro = new Error(
+          `A execução ultrapassou o limite de ${TEMPO_MAX_EXECUCAO_MS / 1000} segundos.`
+        );
+        erro.name = 'ExecucaoTimeoutError';
+        reject(erro);
+      }, TEMPO_MAX_EXECUCAO_MS);
+      pendingExecution = execucao;
+      try {
+        pyodideWorker.postMessage({ type: 'execute', codigo });
+      } catch (error) {
+        pendingExecution = null;
+        clearTimeout(execucao.timeoutId);
+        reject(error);
+      }
+    });
+  }
+
   async function executaCodigo() {
-    if (!pyodideInstance) return;
+    if (!pyodideWorker || !workerReady) return;
 
     const codigo = editor.value;
     if (!codigo.trim()) {
-      terminalOutput.innerHTML = '<div class="terminal-line terminal-system">[Código vazio. Digite algo no editor.]</div>';
+      defineSaidaTerminal('terminal-system', '[Código vazio. Digite algo no editor.]');
       return;
     }
 
@@ -355,15 +400,14 @@ def _processa_codigo_web(codigo_pt):
     const inicio = performance.now();
 
     try {
-      pyodideInstance.globals.set('_codigo_aluno', codigo);
-      const jsonStr = await pyodideInstance.runPythonAsync('_processa_codigo_web(_codigo_aluno)');
+      const jsonStr = await solicitaExecucao(codigo);
       const dados = JSON.parse(jsonStr);
 
       const duracao = Math.round(performance.now() - inicio);
       executionTime.textContent = `Tempo: ${duracao} ms`;
 
       // Atualiza Terminal
-      terminalOutput.innerHTML = '';
+      terminalOutput.replaceChildren();
       if (dados.stdout) {
         const divOut = document.createElement('div');
         divOut.className = 'terminal-line terminal-stdout';
@@ -379,7 +423,7 @@ def _processa_codigo_web(codigo_pt):
       }
 
       if (!dados.stdout && !dados.stderr) {
-        terminalOutput.innerHTML = '<div class="terminal-line terminal-success">✓ Código executado com sucesso (sem saída gerada).</div>';
+        defineSaidaTerminal('terminal-success', '✓ Código executado com sucesso (sem saída gerada).');
       }
 
       // Atualiza Lado a Lado
@@ -391,10 +435,23 @@ def _processa_codigo_web(codigo_pt):
       outputStatus.textContent = (dados.status === 0) ? 'Status: Sucesso (0)' : 'Status: Erro (1)';
 
     } catch (err) {
-      terminalOutput.innerHTML = `<div class="terminal-line terminal-stderr">⚠️ Erro durante a execução: ${err.message}</div>`;
-      outputStatus.textContent = 'Status: Erro';
+      if (err.name === 'ExecucaoTimeoutError') {
+        defineSaidaTerminal(
+          'terminal-stderr',
+          `⚠️ ${err.message}\nO Worker foi reiniciado; revise laços ou cálculos muito longos antes de executar novamente.`
+        );
+        outputStatus.textContent = 'Status: Tempo limite excedido';
+        executionTime.textContent = 'Tempo: limite excedido';
+        inicializaPyodide({ executarInicial: false });
+      } else {
+        defineSaidaTerminal('terminal-stderr', `⚠️ Erro durante a execução: ${err.message}`);
+        outputStatus.textContent = 'Status: Erro';
+        if (!workerReady) {
+          inicializaPyodide({ executarInicial: false });
+        }
+      }
     } finally {
-      btnExecutar.disabled = false;
+      btnExecutar.disabled = !workerReady;
     }
   }
 
@@ -404,6 +461,12 @@ def _processa_codigo_web(codigo_pt):
   editor.value = EXEMPLOS.ola;
   atualizaLinhas();
   atualizaCursorStats();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch((err) => {
+      console.warn('Cache offline indisponível:', err);
+    });
+  }
 
   // Inicia o download e setup do Pyodide
   inicializaPyodide();

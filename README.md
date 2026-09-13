@@ -22,6 +22,8 @@ web/                # Playground Web 100% client-side com Pyodide (Wasm)
 ├── index.html      # interface com editor, console e abas bilíngues
 ├── style.css       # design system dark mode moderno com Rich Aesthetics
 ├── app.js          # motor de integração Pyodide e execução no navegador
+├── pyodide-worker.js # execução isolada do Pyodide com limite de tempo
+├── service-worker.js # cache do shell e dos assets Pyodide após o primeiro acesso
 └── bundle_pt.js    # fontes do transpilador empacotados para o filesystem Wasm
 adr/                # Architecture Decision Records (ADR 001, ADR 002, ADR 003, ADR 004)
 specs/              # especificações ativas, arquivadas e passos de implementação
@@ -57,6 +59,11 @@ python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python
 python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
+O primeiro acesso ao Playground precisa de internet para baixar o runtime Pyodide.
+Depois de uma carga online completa, o Service Worker mantém o shell e os assets
+solicitados em cache; ao reabrir pelo mesmo endereço local, o Playground pode ser
+usado sem rede, desde que o navegador não tenha limpado esse cache.
+
 A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou no arquivo informado.
 
 ## O que já funciona
@@ -69,6 +76,7 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 - **Modo de Transição Bilíngue (ADR-003):** Flag `--lado-a-lado` (ou `--modo-transicao`) exibe tabela comparativa sincronizada linha a linha entre o código em português e o Python canônico com ajuste automático à largura do terminal.
 - **Exportador para Python Canônico Puro (ADR-003):** Flag `--exportar [destino.py]` traduz chamadas de builtins pedagógicos (`mostre` -> `print`, `tamanho` -> `len`, `intervalo` -> `range`, etc.) gerando scripts Python 100% autônomos que rodam diretamente em qualquer interpretador Python padrão sem requerer o transpilador.
 - **Playground Web Interativo com Pyodide (ADR-004):** Aplicação web moderna executando 100% no navegador do cliente via WebAssembly (Wasm), com editor de código em português, visualização bilíngue lado a lado, exportação instantânea e catálogo de exemplos didáticos sem necessidade de instalação local ou servidores backend.
+- **Execução isolada no navegador:** O Pyodide roda em Worker dedicado; execuções que ultrapassam 10 segundos encerram o Worker e inicializam um ambiente novo sem congelar a interface.
 - **Variáveis intuitivas liberadas:** Nomes comuns como `lista = [1, 2, 3]`, `texto = "olá"` ou `tipo = 10` são permitidos livremente e não colidem com palavras reservadas nem são alterados indevidamente na exportação.
 - **Preservação de atributos de objetos:** Acessos e atribuições como `objeto.tipo` e `self.tipo = valor` são preservados sem substituição indevida de tokens.
 - **Números de linha e apontador visual:** Tracebacks apontam 1:1 para a linha do `.ptpy` original, e erros de compilação exibem o trecho de código com o cursor `^`.

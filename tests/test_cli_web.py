@@ -34,7 +34,7 @@ class TestServidorWeb(unittest.TestCase):
         """Valida que pula a porta inicial se ela estiver em uso por outro processo/socket."""
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(("", 8880))
+        s.bind(("127.0.0.1", 8880))
         s.listen(1)
         try:
             # Deve detectar 8880 ocupada e retornar 8881
@@ -54,7 +54,7 @@ class TestServidorWeb(unittest.TestCase):
         t = threading.Thread(target=httpd.serve_forever, daemon=True)
         t.start()
         try:
-            conn = http.client.HTTPConnection("localhost", porta, timeout=2)
+            conn = http.client.HTTPConnection("127.0.0.1", porta, timeout=2)
             conn.request("GET", "/index.html")
             res = conn.getresponse()
             self.assertEqual(200, res.status)
@@ -81,6 +81,19 @@ class TestServidorWeb(unittest.TestCase):
         )
         try:
             self.assertGreaterEqual(porta, 8950)
+            conn = http.client.HTTPConnection("127.0.0.1", porta, timeout=2)
+            conn.request("GET", "/index.html")
+            self.assertEqual(200, conn.getresponse().status)
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
+    def test_cria_servidor_web_porta_dinamica_retorna_porta_real(self):
+        """Porta 0 deve retornar a porta efêmera efetivamente vinculada."""
+        httpd, porta = cria_servidor_web(self.path_temp, porta=0)
+        try:
+            self.assertGreater(porta, 0)
+            self.assertEqual(porta, httpd.server_address[1])
         finally:
             httpd.server_close()
 

@@ -16,6 +16,14 @@ import time
 import webbrowser
 from pathlib import Path
 
+HOST_LOCAL = "127.0.0.1"
+
+
+class PlaygroundTCPServer(socketserver.TCPServer):
+    """Servidor do playground restrito à interface de loopback."""
+
+    allow_reuse_address = True
+
 
 class PlaygroundHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     """Handler HTTP customizado com mapeamento de tipos MIME adequados para Wasm/Web."""
@@ -38,12 +46,17 @@ class PlaygroundHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 def encontra_porta_disponivel(porta_inicial: int = 8000, max_tentativas: int = 10) -> int:
     """Procura a primeira porta livre a partir da porta_inicial."""
+    if not 0 <= porta_inicial <= 65535:
+        raise ValueError("A porta deve estar entre 0 e 65535.")
+    if porta_inicial == 0:
+        return 0
+
     for tentativa in range(max_tentativas):
         porta = porta_inicial + tentativa
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
-                s.bind(("", porta))
+                s.bind((HOST_LOCAL, porta))
                 return porta
             except OSError:
                 continue
@@ -65,10 +78,8 @@ def cria_servidor_web(
     porta_usada = encontra_porta_disponivel(porta)
     handler = functools.partial(PlaygroundHTTPRequestHandler, directory=str(caminho_dir))
 
-    # Permite reutilização rápida de endereço
-    socketserver.TCPServer.allow_reuse_address = True
-    httpd = socketserver.TCPServer(("", porta_usada), handler)
-    return httpd, porta_usada
+    httpd = PlaygroundTCPServer((HOST_LOCAL, porta_usada), handler)
+    return httpd, int(httpd.server_address[1])
 
 
 def inicia_servidor_web(
@@ -109,5 +120,7 @@ def inicia_servidor_web(
             print("\n👋 Servidor encerrado.")
         finally:
             httpd.server_close()
+    else:
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
 
     return httpd, porta_usada
