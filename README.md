@@ -65,6 +65,11 @@ python3 -m unittest discover -s tests -p "test_*.py"
 # 7. Consultar ajuda e versão da CLI
 python3 cli.py --help
 python3 cli.py --version
+
+# 8. Executar os testes E2E do playground (requer Node.js e Chromium)
+npm ci
+node_modules/.bin/playwright install chromium
+npm run test:e2e
 ```
 
 O primeiro acesso ao Playground precisa de internet para baixar o runtime Pyodide.

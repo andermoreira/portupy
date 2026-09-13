@@ -46,3 +46,26 @@ jobs:
 
       - name: Check whitespace errors
         run: git diff --check
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: node_modules/.bin/playwright install --with-deps chromium
+
+      - name: Run browser tests
+        run: npm run test:e2e
