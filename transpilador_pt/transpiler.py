@@ -27,6 +27,11 @@ class ErroDeTraducao(Exception):
     """Erro ao tentar transpilar o código-fonte em português."""
 
 
+# FSTRING_MIDDLE só existe no Python 3.12+ (PEP 701). Nas versões anteriores a
+# f-string é um único token STRING, então usamos um sentinela que nunca casa.
+_FSTRING_MIDDLE = getattr(token, "FSTRING_MIDDLE", -1)
+
+
 ASSIGNMENT_OPERATORS = {
     "=", ":=", "+=", "-=", "*=", "/=", "//=", "%=", "**=",
     "<<=", ">>=", "&=", "|=", "^=", "@=",
@@ -36,14 +41,34 @@ ASSIGNMENT_OPERATORS = {
 def _has_assignment_until_statement_end(
     tokens: list[tokenize.TokenInfo], start: int,
 ) -> bool:
-    """Check whether an assignment operator appears before the statement ends."""
+    """Check whether an assignment operator appears before the statement ends.
+
+    No Python 3.12+ (PEP 701) o marcador de depuração de f-string ``f"{expr=}"``
+    aparece como um token ``OP '='`` no fluxo. Ele não é uma atribuição: é
+    seguido de ``}`` (ou de ``!`` de conversão / ``:`` de format spec). Ignorá-lo
+    evita tratar o builtin à esquerda como alvo de atribuição e deixá-lo sem
+    tradução na exportação canônica.
+    """
+    resto = tokens[start + 1:]
     nesting = 0
-    for tok in tokens[start + 1:]:
+    for pos, tok in enumerate(resto):
         if tok.type == token.OP:
             if tok.string in "([{":
                 nesting += 1
             elif tok.string in ")]}":
                 nesting = max(0, nesting - 1)
+            elif tok.string == "=" and nesting == 0:
+                # '=' de depuração de f-string: seguido de '}', '!' ou ':'.
+                # No 3.12+, o format spec após o '=' surge como FSTRING_MIDDLE.
+                proximo = resto[pos + 1] if pos + 1 < len(resto) else None
+                tipos_sufixo_debug = (token.OP, _FSTRING_MIDDLE)
+                if (
+                    proximo is not None
+                    and proximo.type in tipos_sufixo_debug
+                    and proximo.string[:1] in ("}", "!", ":")
+                ):
+                    continue
+                return True
             elif tok.string in ASSIGNMENT_OPERATORS and nesting == 0:
                 return True
         elif tok.type == token.NEWLINE and nesting == 0:
