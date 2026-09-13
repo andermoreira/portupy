@@ -43,17 +43,34 @@ class PlaygroundHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def encontra_porta_disponivel(porta_inicial: int = 8000, max_tentativas: int = 10) -> int:
-    """Procura a primeira porta livre a partir da porta_inicial."""
+def _intervalo_de_portas(porta_inicial: int, max_tentativas: int = 10) -> range:
+    """Fonte única do intervalo de portas varrido a partir de porta_inicial.
+
+    Usado tanto por ``encontra_porta_disponivel`` (bind exploratório) quanto por
+    ``cria_servidor_web`` (bind definitivo), evitando duas lógicas divergentes.
+    """
     if not 0 <= porta_inicial <= 65535:
         raise ValueError("A porta deve estar entre 0 e 65535.")
     if max_tentativas < 1:
         raise ValueError("A quantidade de tentativas deve ser positiva.")
     if porta_inicial == 0:
+        return range(0, 1)
+    ultima_porta = min(65535, porta_inicial + max_tentativas - 1)
+    return range(porta_inicial, ultima_porta + 1)
+
+
+def encontra_porta_disponivel(porta_inicial: int = 8000, max_tentativas: int = 10) -> int:
+    """Procura a primeira porta livre a partir da porta_inicial.
+
+    Observação: há uma janela TOCTOU entre esta checagem e um bind posterior;
+    para vincular um servidor prefira ``cria_servidor_web``, que faz o bind
+    definitivo diretamente.
+    """
+    portas = _intervalo_de_portas(porta_inicial, max_tentativas)
+    if porta_inicial == 0:
         return 0
 
-    ultima_porta = min(65535, porta_inicial + max_tentativas - 1)
-    for porta in range(porta_inicial, ultima_porta + 1):
+    for porta in portas:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
@@ -80,11 +97,7 @@ def cria_servidor_web(
 
     handler = functools.partial(PlaygroundHTTPRequestHandler, directory=str(caminho_dir))
 
-    if porta == 0:
-        portas = (0,)
-    else:
-        ultima_porta = min(65535, porta + 9)
-        portas = range(porta, ultima_porta + 1)
+    portas = _intervalo_de_portas(porta)
 
     ultimo_erro = None
     for porta_tentativa in portas:

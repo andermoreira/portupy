@@ -37,18 +37,6 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-async function respondeComCachePrimeiro(request) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-
-  const response = await fetch(request);
-  if (response.ok || response.type === 'opaque') {
-    await cache.put(request, response.clone());
-  }
-  return response;
-}
-
 async function respondeComRedePrimeiro(request) {
   const cache = await caches.open(CACHE_NAME);
   try {

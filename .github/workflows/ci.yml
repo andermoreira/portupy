@@ -32,7 +32,7 @@ jobs:
           python -m transpilador_pt.bundle_web
           git diff --exit-code -- web/bundle_pt.js
 
-      - name: Validate JavaScript syntax
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
