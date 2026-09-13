@@ -240,6 +240,72 @@ class TestTranspiler(unittest.TestCase):
         self.assertEqual(set(BUILTINS_PT), set(BUILTINS_CANONICOS))
 
 
+class TestFStringCanonica(unittest.TestCase):
+    """Casos de borda da tradução de expressões dentro de f-strings.
+
+    O objetivo é traduzir os builtins pedagógicos que aparecem nas expressões
+    interpoladas sem tocar em texto literal, format spec, conversão (!r/!s/!a)
+    ou no marcador de depuração (=). Todos os resultados devem permanecer
+    Python válido e compilável.
+    """
+
+    def _canonico_compilavel(self, codigo_pt: str) -> str:
+        codigo_py = transpila_canonico(codigo_pt)
+        compile(codigo_py, "<fstring>", "exec")
+        return codigo_py.replace(" ", "")
+
+    def test_builtin_simples_em_fstring(self):
+        saida = self._canonico_compilavel('x = f"n={tamanho(a)}"\n')
+        self.assertIn('f"n={len(a)}"', saida)
+
+    def test_conversao_nao_confunde_com_desigualdade(self):
+        """'!=' é operador, não conversão: o builtin após ele deve ser traduzido."""
+        saida = self._canonico_compilavel('x = f"{a != tamanho(b)}"\n')
+        self.assertIn("a!=len(b)", saida)
+
+    def test_conversao_repr_preservada_e_builtin_traduzido(self):
+        saida = self._canonico_compilavel('x = f"{tamanho(a)!r}"\n')
+        self.assertIn("{len(a)!r}", saida)
+
+    def test_depuracao_igual_traduz_expressao_e_preserva_marcador(self):
+        """f"{expr=}" deve traduzir a expressão à esquerda do '=' de depuração."""
+        for codigo_pt in (
+            'x = f"{tamanho(a)=}"\n',
+            'x = f"{tamanho(a) = }"\n',
+            'x = f"{tamanho(a)=!r}"\n',
+            'x = f"{tamanho(a)=:>5}"\n',
+        ):
+            with self.subTest(codigo_pt=codigo_pt):
+                saida = self._canonico_compilavel(codigo_pt)
+                self.assertIn("len(a)=", saida)
+                self.assertNotIn("tamanho", saida)
+
+    def test_depuracao_igual_executa_com_texto_canonico(self):
+        """No runtime, o '=' de depuração ecoa a expressão já traduzida."""
+        codigo_py = transpila_canonico('a = [1, 2, 3]\nx = f"{tamanho(a)=}"\n')
+        namespace = {}
+        exec(compile(codigo_py, "<fstring>", "exec"), namespace)
+        self.assertNotIn("tamanho", namespace["x"])
+        self.assertEqual("len(a)=3", namespace["x"].replace(" ", ""))
+
+    def test_format_spec_e_slice_nao_sao_traduzidos_como_campo(self):
+        """':' de format spec e de slice não devem quebrar a extração da expressão."""
+        saida_spec = self._canonico_compilavel('x = f"{tamanho(a):>10}"\n')
+        self.assertIn("{len(a):>10}", saida_spec)
+        saida_slice = self._canonico_compilavel('x = f"{lista[1:2]}"\n')
+        self.assertIn("lista[1:2]", saida_slice)
+
+    def test_fstring_aninhada_e_aspas_triplas(self):
+        saida_aninhada = self._canonico_compilavel('x = f"{f\'{tamanho(a)}\'}"\n')
+        self.assertIn("len(a)", saida_aninhada)
+        saida_triplas = self._canonico_compilavel('x = f"""linha {tamanho(a)} fim"""\n')
+        self.assertIn("linha{len(a)}fim", saida_triplas)
+
+    def test_chaves_literais_preservadas(self):
+        saida = self._canonico_compilavel('x = f"{{literal}} {tamanho(a)}"\n')
+        self.assertIn("{{literal}}", saida)
+        self.assertIn("{len(a)}", saida)
+
 
 if __name__ == "__main__":
     unittest.main()

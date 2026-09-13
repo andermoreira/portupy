@@ -470,8 +470,11 @@ def _substitui_em_fstring(
             nivel_colch = 0
             em_aspas = None
             j = inicio
-            spec_format = ""
-            expr_bruta = ""
+            # Fim da expressão de código dentro do campo (antes de sufixos
+            # como o '=' de depuração, a conversão '!r' ou o format spec ':').
+            fim_expr = -1
+            # Sufixo preservado literalmente: '=' de depuração + '!conv' + ':spec'.
+            sufixo = ""
             while j < n:
                 ch = miolo[j]
                 if em_aspas:
@@ -497,18 +500,54 @@ def _substitui_em_fstring(
                         if nivel_chaves == 0 and nivel_paren == 0 and nivel_colch == 0:
                             break
                         nivel_chaves -= 1
-                    elif (ch == ":" or ch == "!") and nivel_chaves == 0 and nivel_paren == 0 and nivel_colch == 0:
-                        expr_bruta = miolo[inicio:j]
-                        k = j
-                        while k < n and miolo[k] != "}":
-                            k += 1
-                        spec_format = miolo[j:k]
-                        j = k
-                        break
+                    elif (
+                        nivel_chaves == 0
+                        and nivel_paren == 0
+                        and nivel_colch == 0
+                    ):
+                        # '=' de depuração (PEP: f"{expr=}"): um '=' isolado, não
+                        # parte de '==', '!=', '<=', '>=', ':='. Marca o fim da
+                        # expressão; tudo dali em diante é preservado literal.
+                        if (
+                            ch == "="
+                            and miolo[j + 1 : j + 2] != "="
+                            and miolo[j - 1 : j] not in ("=", "!", "<", ">", ":")
+                        ):
+                            fim_expr = j
+                            k = j
+                            while k < n and miolo[k] != "}":
+                                k += 1
+                            sufixo = miolo[j:k]
+                            j = k
+                            break
+                        # Conversão '!r'/'!s'/'!a', só quando seguida de '}' ou ':'
+                        # (evita confundir com o operador '!=').
+                        if (
+                            ch == "!"
+                            and miolo[j + 1 : j + 2] in ("r", "s", "a")
+                            and miolo[j + 2 : j + 3] in ("}", ":")
+                        ):
+                            fim_expr = j
+                            k = j
+                            while k < n and miolo[k] != "}":
+                                k += 1
+                            sufixo = miolo[j:k]
+                            j = k
+                            break
+                        # Início do format spec ':' no nível do campo.
+                        if ch == ":":
+                            fim_expr = j
+                            k = j
+                            while k < n and miolo[k] != "}":
+                                k += 1
+                            sufixo = miolo[j:k]
+                            j = k
+                            break
                 j += 1
 
-            if not spec_format:
-                expr_bruta = miolo[inicio:j]
+            if fim_expr == -1:
+                fim_expr = j
+            expr_bruta = miolo[inicio:fim_expr]
 
             try:
                 expr_traduzida = _transpila_core(
@@ -519,7 +558,7 @@ def _substitui_em_fstring(
             except Exception:
                 expr_traduzida = expr_bruta
 
-            resultado.append("{" + expr_traduzida + spec_format + "}")
+            resultado.append("{" + expr_traduzida + sufixo + "}")
             i = j + 1
         else:
             resultado.append(miolo[i])
