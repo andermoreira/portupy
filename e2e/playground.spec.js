@@ -22,6 +22,12 @@ test('executa código em português e exibe o Python canônico', async ({ page }
   await page.getByRole('tab', { name: /Python Canônico/ }).click();
   await expect(page.locator('#canonico-output')).toContainText('print');
   await expect(page.locator('#canonico-output')).toContainText('teste E2E');
+
+  // A aba canônica também recebe realce de sintaxe (reaproveitado do editor).
+  const canonicoHtml = await page
+    .locator('#canonico-output')
+    .evaluate((el) => el.innerHTML);
+  expect(canonicoHtml).toContain('syntax-builtin'); // 'print'
 });
 
 test('mantém syntax highlight seguro e atualizado ao inserir Tab', async ({ page }) => {

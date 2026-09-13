@@ -111,8 +111,7 @@
     return codigo.length;
   }
 
-  function atualizaSyntaxHighlight() {
-    const codigo = editor.value;
+  function geraHtmlDestaque(codigo) {
     let html = '';
     let indice = 0;
 
@@ -181,7 +180,11 @@
       indice += 1;
     }
 
-    syntaxHighlightCode.innerHTML = html;
+    return html;
+  }
+
+  function atualizaSyntaxHighlight() {
+    syntaxHighlightCode.innerHTML = geraHtmlDestaque(editor.value);
   }
 
   editorCodeArea.classList.add('syntax-highlight-enabled');
@@ -345,7 +348,7 @@
     atualizaSyntaxHighlight();
     defineSaidaTerminal('terminal-system', '[Editor limpo. Digite ou escolha um exemplo acima.]');
     bilingueOutput.textContent = 'Execute o código para visualizar a comparação lado a lado.';
-    canonicoOutput.textContent = '# O código Python puro canônico aparecerá aqui após a transpilação.';
+    canonicoOutput.innerHTML = geraHtmlDestaque('# O código Python puro canônico aparecerá aqui após a transpilação.');
     outputStatus.textContent = 'Status: Pronto';
     executionTime.textContent = 'Tempo: -- ms';
   });
@@ -544,8 +547,8 @@
       // Atualiza Lado a Lado
       bilingueOutput.textContent = dados.lado_a_lado || 'Nenhuma saída comparativa gerada.';
 
-      // Atualiza Canônico
-      canonicoOutput.textContent = dados.canonico || '# Nenhum código gerado.';
+      // Atualiza Canônico (com realce de sintaxe reaproveitado do editor)
+      canonicoOutput.innerHTML = geraHtmlDestaque(dados.canonico || '# Nenhum código gerado.');
 
       outputStatus.textContent = (dados.status === 0) ? 'Status: Sucesso (0)' : 'Status: Erro (1)';
 
