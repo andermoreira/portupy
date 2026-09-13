@@ -1,6 +1,6 @@
-"""Gerador do bundle estático dos arquivos do Transpilador PT para a Web.
+"""Gerador do bundle estático dos arquivos do PortuPy para a Web.
 
-Empacota o código-fonte puro do pacote transpilador_pt em um arquivo JavaScript
+Empacota o código-fonte puro do pacote portupy em um arquivo JavaScript
 para que o Pyodide possa montá-lo diretamente no seu sistema de arquivos virtual Wasm.
 """
 
@@ -28,10 +28,10 @@ ARQUIVOS_EXEMPLOS = tuple(
 
 
 def gera_bundle_web(caminho_saida: str | Path | None = None) -> Path:
-    """Lê os módulos de transpilador_pt e gera web/bundle_pt.js."""
-    raiz_projeto = Path(__file__).resolve().parent.parent
-    pasta_origem = raiz_projeto / "transpilador_pt"
-    
+    """Lê os módulos de portupy e gera web/bundle_pt.js."""
+    pasta_origem = Path(__file__).resolve().parent
+    raiz_projeto = pasta_origem.parent
+
     if caminho_saida is None:
         caminho_saida = raiz_projeto / "web" / "bundle_pt.js"
     else:
@@ -55,10 +55,10 @@ def gera_bundle_web(caminho_saida: str | Path | None = None) -> Path:
     caminho_saida.parent.mkdir(parents=True, exist_ok=True)
     conteudo_json = json.dumps(fontes, ensure_ascii=False, indent=2)
     conteudo_js = (
-        "// Gerado automaticamente por transpilador_pt/bundle_web.py — não editar manualmente\n"
-        f"window.TRANSPILADOR_PT_SOURCES = {conteudo_json};\n"
-        f"window.TRANSPILADOR_PT_EXEMPLOS = {json.dumps(exemplos, ensure_ascii=False, indent=2)};\n"
-        f"window.TRANSPILADOR_PT_DESTAQUE = {json.dumps(destaque, ensure_ascii=False, indent=2)};\n"
+        "// Gerado automaticamente por portupy/bundle_web.py — não editar manualmente\n"
+        f"window.PORTUPY_SOURCES = {conteudo_json};\n"
+        f"window.PORTUPY_EXEMPLOS = {json.dumps(exemplos, ensure_ascii=False, indent=2)};\n"
+        f"window.PORTUPY_DESTAQUE = {json.dumps(destaque, ensure_ascii=False, indent=2)};\n"
     )
 
     caminho_saida.write_text(conteudo_js, encoding="utf-8")

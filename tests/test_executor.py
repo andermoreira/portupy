@@ -2,7 +2,7 @@ import contextlib
 import io
 import unittest
 
-from transpilador_pt.executor import executa_codigo, executa_arquivo
+from portupy.executor import executa_codigo, executa_arquivo
 
 
 class TestExecutor(unittest.TestCase):
@@ -37,7 +37,7 @@ class TestExecutor(unittest.TestCase):
         """Valida a execução completa do script oficial ola.ptpy com f-string."""
         f = io.StringIO()
         with contextlib.redirect_stdout(f):
-            status = executa_arquivo("transpilador_pt/exemplos/ola.ptpy")
+            status = executa_arquivo("portupy/exemplos/ola.ptpy")
         self.assertEqual(0, status)
         saida = f.getvalue()
         self.assertNotIn("NameError", saida)
@@ -47,7 +47,7 @@ class TestExecutor(unittest.TestCase):
         """Valida a execução completa do script exemplo condicionais.ptpy."""
         f = io.StringIO()
         with contextlib.redirect_stdout(f):
-            status = executa_arquivo("transpilador_pt/exemplos/condicionais.ptpy")
+            status = executa_arquivo("portupy/exemplos/condicionais.ptpy")
         self.assertEqual(0, status)
         saida = f.getvalue()
         self.assertIn("Excelente (gabaritou!)", saida)

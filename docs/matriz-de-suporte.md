@@ -1,6 +1,6 @@
 # Matriz de suporte da linguagem
 
-Este documento descreve o contrato atual do Transpilador PT. A implementação usa o
+Este documento descreve o contrato atual do PortuPy. A implementação usa o
 tokenizador da biblioteca padrão e traduz somente os tokens e contextos listados aqui. A
 presença de uma construção no Python não significa que exista uma tradução equivalente em
 português.

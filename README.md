@@ -1,4 +1,4 @@
-# Transpilador PT — protótipo
+# PortuPy — protótipo
 
 Protótipo funcional de um transpilador Python-em-português, construído
 com o módulo `tokenize` da stdlib (sem parser próprio).
@@ -6,7 +6,7 @@ com o módulo `tokenize` da stdlib (sem parser próprio).
 ## Estrutura
 
 ```
-transpilador_pt/
+portupy/
 ├── dicionario.py   # palavras-chave estruturais + builtins PT em runtime e canônicos
 ├── transpiler.py   # núcleo léxico: fusão de tokens, sensibilidade a contexto e exportador canônico
 ├── escopo_canonico.py # análise de escopo (ast/symtable) que protege nomes locais na exportação
@@ -39,17 +39,17 @@ cli.py              # interface de linha de comando com modos de execução, tra
 
 ```bash
 # 1. Executar scripts de exemplo normalmente no terminal
-python3 cli.py transpilador_pt/exemplos/ola.ptpy
-python3 cli.py transpilador_pt/exemplos/condicionais.ptpy
-python3 cli.py transpilador_pt/exemplos/erro.ptpy
+python3 cli.py portupy/exemplos/ola.ptpy
+python3 cli.py portupy/exemplos/condicionais.ptpy
+python3 cli.py portupy/exemplos/erro.ptpy
 
 # 2. Modo de transição bilíngue (lado a lado)
-python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --lado-a-lado
-# (ou use o alias: python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --modo-transicao)
+python3 cli.py portupy/exemplos/condicionais.ptpy --lado-a-lado
+# (ou use o alias: python3 cli.py portupy/exemplos/condicionais.ptpy --modo-transicao)
 
 # 3. Exportar para código Python canônico independente
-python3 cli.py transpilador_pt/exemplos/ola.ptpy --exportar                # imprime no terminal
-python3 cli.py transpilador_pt/exemplos/ola.ptpy --exportar meu_script.py  # salva em arquivo
+python3 cli.py portupy/exemplos/ola.ptpy --exportar                # imprime no terminal
+python3 cli.py portupy/exemplos/ola.ptpy --exportar meu_script.py  # salva em arquivo
 python3 meu_script.py                                                      # roda sem o transpilador!
 
 # 4. Iniciar o Playground Web no navegador (100% client-side via Pyodide)
@@ -58,15 +58,15 @@ python3 cli.py --web 8080   # porta customizada opcional
 python3 cli.py --web --sem-navegador  # inicia sem abrir interface gráfica
 
 # 5. Ver o Python intermediário de compilação
-python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python
+python3 cli.py portupy/exemplos/condicionais.ptpy --mostrar-python
 
 # 6. Executar a suíte completa de testes automatizados
 python3 -m unittest discover -s tests -p "test_*.py"
 
 # 7. Instalar o pacote e usar a CLI globalmente (opcional)
 python3 -m pip install .
-transpilador-pt transpilador_pt/exemplos/ola.ptpy
-transpilador-pt --web --sem-navegador
+portupy portupy/exemplos/ola.ptpy
+portupy --web --sem-navegador
 
 # 8. Consultar ajuda e versão da CLI
 python3 cli.py --help
@@ -130,7 +130,7 @@ que também aponta os testes responsáveis por proteger cada grupo de construç�
 
 ## Distribuição
 
-O `pyproject.toml` publica a CLI como `transpilador-pt` e inclui os exemplos, o
+O `pyproject.toml` publica a CLI como `portupy` e inclui os exemplos, o
 playground estático e o runtime Pyodide local no wheel. A suíte de CI constrói esse
 artefato para verificar que uma instalação do pacote continua capaz de localizar o
 servidor web e seus assets.

@@ -1,4 +1,4 @@
-"""Módulo de servidor web local para o Playground do Transpilador PT.
+"""Módulo de servidor web local para o Playground do PortuPy.
 
 Fornece um servidor HTTP estático leve baseado na stdlib para executar
 e testar a aplicação WebAssembly localmente com auto-alocação de portas.
@@ -133,7 +133,7 @@ def inicia_servidor_web(
     httpd, porta_usada = cria_servidor_web(diretorio, porta=porta)
     url = f"http://localhost:{porta_usada}"
 
-    print(f"🌐 Transpilador PT Playground iniciado!")
+    print(f"🌐 PortuPy Playground iniciado!")
     print(f"👉 Acesse: {url}")
     print("Pressione Ctrl+C para encerrar o servidor.\n")
 

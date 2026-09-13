@@ -1,1 +1,1 @@
-"""Assets estáticos distribuíveis do playground do Transpilador PT."""
+"""Assets estáticos distribuíveis do playground do PortuPy."""

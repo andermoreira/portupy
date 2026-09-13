@@ -5,7 +5,7 @@ import threading
 import unittest
 from pathlib import Path
 
-from transpilador_pt.servidor import (
+from portupy.servidor import (
     PlaygroundHTTPRequestHandler,
     cria_servidor_web,
     encontra_porta_disponivel,
@@ -51,7 +51,7 @@ class TestServidorWeb(unittest.TestCase):
     def test_cria_servidor_web_diretorio_inexistente(self):
         """Valida que levanta FileNotFoundError para diretório inválido."""
         with self.assertRaises(FileNotFoundError):
-            cria_servidor_web("/diretorio/inexistente/transpilador_pt_nao_existe", porta=8900)
+            cria_servidor_web("/diretorio/inexistente/portupy_nao_existe", porta=8900)
 
     def test_cria_servidor_web_rejeita_porta_fora_do_intervalo(self):
         """A criação do servidor aplica a mesma validação da busca de portas."""

@@ -1,1 +1,1 @@
-"""Suíte de testes automatizados do Transpilador PT."""
+"""Suíte de testes automatizados do PortuPy."""

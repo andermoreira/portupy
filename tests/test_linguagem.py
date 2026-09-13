@@ -1,7 +1,7 @@
 import unittest
 
-from transpilador_pt.dicionario import BUILTINS_CANONICOS, BUILTINS_PT, PALAVRAS_CHAVE
-from transpilador_pt.transpiler import transpila, transpila_canonico
+from portupy.dicionario import BUILTINS_CANONICOS, BUILTINS_PT, PALAVRAS_CHAVE
+from portupy.transpiler import transpila, transpila_canonico
 
 
 class TestContratoDeLinguagem(unittest.TestCase):
