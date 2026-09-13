@@ -21,8 +21,8 @@ class TestTranspiler(unittest.TestCase):
     def test_traducao_funcao_e_retorno(self):
         codigo_pt = "funcao dobro(n):\n    retorne n * 2\n"
         codigo_py = transpila(codigo_pt)
-        self.assertIn("def dobro (n ):", codigo_py)
-        self.assertIn("return n *2", codigo_py)
+        self.assertIn("def dobro(n):", codigo_py)
+        self.assertIn("return n * 2", codigo_py)
 
     def test_bloqueio_atribuicao_palavra_chave_estrutural(self):
         for codigo in ("para = 10", "para += 1", "para: inteiro = 1", "para, valor = (1, 2)"):
@@ -55,14 +55,14 @@ class TestTranspiler(unittest.TestCase):
     def test_traducao_ouse_retrocompatibilidade(self):
         """Valida que 'ouse' continua transpilando para 'elif' por compatibilidade."""
         codigo_py = transpila("se x:\n    pass\nouse y:\n    pass\n")
-        self.assertIn("elif y :", codigo_py)
+        self.assertIn("elif y:", codigo_py)
 
     def test_traducao_senao_se_e_variacoes(self):
         """Valida suporte a 'senao se', 'senão se', 'senaose' e 'senãose' -> 'elif'."""
         for trecho in ("senao se x > 0:", "senão se x > 0:", "senaose x > 0:", "senãose x > 0:"):
             with self.subTest(trecho=trecho):
                 codigo_py = transpila(f"se x == 0:\n    pass\n{trecho}\n    pass\n")
-                self.assertIn("elif x >0 :", codigo_py.replace(" > ", ">"))
+                self.assertIn("elif x > 0:", codigo_py)
 
     def test_traducao_eh_contextual(self):
         """Valida que 'eh'/'é' vira 'is' para nulo/booleanos e '==' para literais/valores."""

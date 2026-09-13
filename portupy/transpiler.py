@@ -295,7 +295,7 @@ def _transpila_core(
                         f"linguagem (equivale a 'elif' em Python) e não pode "
                         f"ser usada como nome de variável."
                     )
-                tokens_saida.append((token.NAME, "elif"))
+                tokens_saida.append((token.NAME, "elif", inicio, proximo.end, linha))
                 i += 2
                 continue
 
@@ -313,10 +313,14 @@ def _transpila_core(
                         f"linguagem e não pode ser usada como nome de variável."
                     )
                 if proximo_2 is not None and proximo_2.string in SINGLETONS_DE_IDENTIDADE:
-                    tokens_saida.append((token.NAME, "is"))
-                    tokens_saida.append((token.NAME, "not"))
+                    # 'is not' vira dois tokens; damos posições crescentes e sem
+                    # sobreposição (o untokenize exige ordem monotônica).
+                    fim_is = (inicio[0], inicio[1] + 2)
+                    inicio_not = (inicio[0], inicio[1] + 3)
+                    tokens_saida.append((token.NAME, "is", inicio, fim_is, linha))
+                    tokens_saida.append((token.NAME, "not", inicio_not, proximo.end, linha))
                 else:
-                    tokens_saida.append((token.OP, "!="))
+                    tokens_saida.append((token.OP, "!=", inicio, proximo.end, linha))
                 i += 2
                 continue
 
@@ -328,9 +332,9 @@ def _transpila_core(
                         f"linguagem e não pode ser usada como nome de variável."
                     )
                 if proximo is not None and proximo.string in SINGLETONS_DE_IDENTIDADE:
-                    tokens_saida.append((token.NAME, "is"))
+                    tokens_saida.append((token.NAME, "is", inicio, fim, linha))
                 else:
-                    tokens_saida.append((token.OP, "=="))
+                    tokens_saida.append((token.OP, "==", inicio, fim, linha))
                 i += 1
                 continue
 
@@ -377,7 +381,10 @@ def _transpila_core(
                 names_protected_for(tok),
             )
 
-        tokens_saida.append((tipo, valor))
+        # 5-tupla (com posições originais) faz o untokenize preservar o
+        # espaçamento do código-fonte, mesmo quando o texto do token muda
+        # (ex.: funcao -> def). Evita os espaços espúrios do modo compat.
+        tokens_saida.append((tipo, valor, inicio, fim, linha))
         i += 1
 
 
