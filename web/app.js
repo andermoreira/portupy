@@ -53,7 +53,12 @@
     terminalOutput.replaceChildren(linha);
   }
 
-  const PALAVRAS_CHAVE_DESTAQUE = new Set([
+  // Os grupos de realce vêm do bundle, derivados da fonte única em
+  // transpilador_pt/dicionario.py, evitando listas paralelas mantidas à mão.
+  // O fallback cobre apenas o caso do bundle não expor os grupos (ex.: bundle
+  // antigo em cache), preservando um realce mínimo funcional.
+  const DESTAQUE = window.TRANSPILADOR_PT_DESTAQUE || {};
+  const PALAVRAS_CHAVE_DESTAQUE = new Set(DESTAQUE.palavrasChave || [
     'se', 'senao', 'senão', 'senaose', 'senãose', 'ouse', 'para',
     'enquanto', 'funcao', 'função', 'retorne', 'classe', 'importe',
     'de', 'como', 'com', 'tente', 'exceto', 'finalmente', 'levante',
@@ -63,14 +68,14 @@
     'class', 'import', 'from', 'as', 'with', 'try', 'except', 'finally',
     'raise', 'break', 'yield', 'async', 'await'
   ]);
-  const BUILTINS_DESTAQUE = new Set([
+  const BUILTINS_DESTAQUE = new Set(DESTAQUE.builtins || [
     'mostre', 'leia', 'tamanho', 'intervalo', 'some', 'maximo', 'minimo',
     'abs', 'arredonde', 'lista', 'dicionario', 'dicionário', 'conjunto',
     'tupla', 'texto', 'inteiro', 'decimal', 'booleano', 'print', 'input',
     'len', 'range', 'sum', 'max', 'min', 'dict', 'set', 'tuple', 'str',
     'int', 'float', 'bool', 'enumerate', 'zip', 'sorted'
   ]);
-  const BOOLEANOS_DESTAQUE = new Set([
+  const BOOLEANOS_DESTAQUE = new Set(DESTAQUE.booleanos || [
     'verdadeiro', 'falso', 'nulo', 'True', 'False', 'None'
   ]);
 
@@ -305,7 +310,12 @@
   btnCopiar.addEventListener('click', async () => {
     let texto = '';
     if (abaAtiva === 'terminal') {
-      texto = terminalOutput.innerText;
+      // Cada linha do terminal é um <div> irmão (ex.: stdout e stderr).
+      // Juntar por '\n' preserva a separação entre blocos sem depender de
+      // innerText (que varia com o layout renderizado entre navegadores).
+      texto = Array.from(terminalOutput.children)
+        .map((linha) => linha.textContent)
+        .join('\n');
     } else if (abaAtiva === 'bilingue') {
       texto = bilingueOutput.textContent;
     } else if (abaAtiva === 'canonico') {

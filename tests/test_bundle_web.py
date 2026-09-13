@@ -15,20 +15,22 @@ class TestBundleWeb(unittest.TestCase):
             caminho_bundle = gera_bundle_web(Path(diretorio_temp) / "bundle.js")
             conteudo = caminho_bundle.read_text(encoding="utf-8")
 
-        correspondencia_fontes = re.search(
-            r"window\.TRANSPILADOR_PT_SOURCES = (.*);\nwindow\.TRANSPILADOR_PT_EXEMPLOS",
-            conteudo,
-            re.DOTALL,
-        )
-        correspondencia_exemplos = re.search(
-            r"window\.TRANSPILADOR_PT_EXEMPLOS = (.*);\s*$",
-            conteudo,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(correspondencia_fontes)
-        self.assertIsNotNone(correspondencia_exemplos)
-        fontes_bundle = json.loads(correspondencia_fontes.group(1))
-        exemplos_bundle = json.loads(correspondencia_exemplos.group(1))
+        def extrai_bloco(nome_variavel: str) -> str:
+            # Cada bloco termina em ';' seguido de nova linha e da próxima
+            # atribuição 'window.' (ou do fim do arquivo). Ancorar assim mantém
+            # o parsing robusto à adição de novos blocos ao bundle.
+            correspondencia = re.search(
+                rf"window\.{nome_variavel} = (.*?);\n(?:window\.|\Z)",
+                conteudo,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(
+                correspondencia, f"bloco {nome_variavel} não encontrado no bundle"
+            )
+            return correspondencia.group(1)
+
+        fontes_bundle = json.loads(extrai_bloco("TRANSPILADOR_PT_SOURCES"))
+        exemplos_bundle = json.loads(extrai_bloco("TRANSPILADOR_PT_EXEMPLOS"))
         pasta_modulo = Path(__file__).resolve().parent.parent / "transpilador_pt"
 
         self.assertEqual(set(ARQUIVOS_MODULO), set(fontes_bundle))
@@ -43,6 +45,12 @@ class TestBundleWeb(unittest.TestCase):
         for nome_arquivo in ARQUIVOS_EXEMPLOS:
             exemplo_atual = (pasta_modulo / "exemplos" / nome_arquivo).read_text(encoding="utf-8")
             self.assertEqual(exemplo_atual, exemplos_bundle[Path(nome_arquivo).stem])
+
+        # Os grupos de realce expostos ao playground devem refletir a fonte única.
+        from transpilador_pt.dicionario import conjuntos_de_destaque
+
+        destaque_bundle = json.loads(extrai_bloco("TRANSPILADOR_PT_DESTAQUE"))
+        self.assertEqual(conjuntos_de_destaque(), destaque_bundle)
 
     def test_bundle_versionado_esta_atualizado(self):
         """O artefato versionado deve ser exatamente o bundle que o gerador produz."""
