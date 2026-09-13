@@ -21,6 +21,49 @@ class TestErros(unittest.TestCase):
             self.assertIsNotNone(traducao)
             self.assertIn("usada antes de existir", traducao)
 
+    def test_traduz_excecao_comparacao_incompativel(self):
+        traducao = traduz_excecao(
+            TypeError("'>=' not supported between instances of 'str' and 'int'")
+        )
+        self.assertIsNotNone(traducao)
+        self.assertIn("tipos str e int não são compatíveis", traducao)
+
+    def test_traduz_excecao_tamanho_de_tipo_invalido(self):
+        traducao = traduz_excecao(TypeError("object of type 'int' has no len()"))
+        self.assertIsNotNone(traducao)
+        self.assertIn("não possui tamanho", traducao)
+
+    def test_traduz_excecao_chamada_de_valor(self):
+        traducao = traduz_excecao(TypeError("'int' object is not callable"))
+        self.assertIsNotNone(traducao)
+        self.assertIn("como se fosse uma função", traducao)
+
+    def test_traduz_excecao_argumentos_no_plural(self):
+        traducao = traduz_excecao(
+            TypeError("funcao() missing 2 required positional arguments: 'a' and 'b'")
+        )
+        self.assertIsNotNone(traducao)
+        self.assertIn("2 argumento(s)", traducao)
+
+    def test_traduz_excecao_variavel_local_sem_valor(self):
+        traducao = traduz_excecao(
+            UnboundLocalError("cannot access local variable 'total' where it is not associated with a value")
+        )
+        self.assertIsNotNone(traducao)
+        self.assertIn("receber um valor", traducao)
+
+    def test_traduz_excecao_sintaxe_com_doispontos(self):
+        traducao = traduz_excecao(SyntaxError("expected ':'"))
+        self.assertIsNotNone(traducao)
+        self.assertIn("dois pontos", traducao)
+
+    def test_traduz_excecao_modulo_com_subpacote(self):
+        traducao = traduz_excecao(
+            ModuleNotFoundError("No module named 'pacote.interno.modulo'")
+        )
+        self.assertIsNotNone(traducao)
+        self.assertIn("pacote.interno.modulo", traducao)
+
     def test_formata_erro_amigavel_runtime_com_linha(self):
         try:
             compilado = compile("1 / 0", "<codigo_pt>", "exec")

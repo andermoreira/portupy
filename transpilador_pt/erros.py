@@ -42,8 +42,13 @@ REGRAS: list[Regra] = [
                   "mas essa chave não existe nele.",
     ),
     _regra(
-        ZeroDivisionError, r"division by zero",
+        ZeroDivisionError, r"(?:division by zero|integer division or modulo by zero)",
         lambda m: "Você tentou dividir um número por zero, o que não é permitido.",
+    ),
+    _regra(
+        TypeError, r"'([^']+)' not supported between instances of '([^']+)' and '([^']+)'",
+        lambda m: f"Você tentou comparar valores com o operador {m.group(1)}, mas os tipos "
+                  f"{m.group(2)} e {m.group(3)} não são compatíveis.",
     ),
     _regra(
         TypeError, r"unsupported operand type\(s\) for \+: '(\w+)' and '(\w+)'",
@@ -63,7 +68,18 @@ REGRAS: list[Regra] = [
                   f"{m.group(1)}, mas esse tipo não permite isso.",
     ),
     _regra(
-        TypeError, r"(\w+)\(\) missing (\d+) required positional argument",
+        TypeError, r"object of type '([^']+)' has no len\(\)",
+        lambda m: f"Você tentou descobrir o tamanho de um valor do tipo {m.group(1)}, "
+                  "mas esse tipo não possui tamanho. Use 'tamanho(...)' apenas em textos "
+                  "ou coleções.",
+    ),
+    _regra(
+        TypeError, r"'([^']+)' object is not callable",
+        lambda m: f"Você tentou chamar um valor do tipo {m.group(1)} como se fosse uma função. "
+                  "Confira se escreveu o nome correto.",
+    ),
+    _regra(
+        TypeError, r"(\w+)\(\) missing (\d+) required positional arguments?",
         lambda m: f"A função '{m.group(1)}' precisa de {m.group(2)} argumento(s) "
                   "a mais do que você passou.",
     ),
@@ -78,6 +94,11 @@ REGRAS: list[Regra] = [
                   "Confira se digitou o nome certo ou se é o tipo de objeto esperado.",
     ),
     _regra(
+        UnboundLocalError, r"cannot access local variable '([^']+)'",
+        lambda m: f"A variável local '{m.group(1)}' foi usada antes de receber um valor. "
+                  "Atribua um valor a ela antes de tentar usá-la.",
+    ),
+    _regra(
         NameError, r"name '(\w+)' is not defined",
         lambda m: f"A variável ou função '{m.group(1)}' foi usada antes de existir. "
                   "Confira se você não esqueceu de criá-la antes, ou se digitou "
@@ -89,7 +110,12 @@ REGRAS: list[Regra] = [
                   "mas esse texto não representa um número inteiro válido.",
     ),
     _regra(
-        ModuleNotFoundError, r"No module named '(\w+)'",
+        ValueError, r"could not convert string to float: '([^']*)'",
+        lambda m: f"Você tentou converter \"{m.group(1)}\" para número decimal, "
+                  "mas esse texto não representa um número válido.",
+    ),
+    _regra(
+        ModuleNotFoundError, r"No module named '([^']+)'",
         lambda m: f"O módulo '{m.group(1)}' não foi encontrado. Confira o nome "
                   "ou se ele precisa ser instalado.",
     ),
@@ -109,12 +135,18 @@ REGRAS: list[Regra] = [
                   "Verifique os espaços no início da linha para alinhar com o bloco correspondente.",
     ),
     _regra(
+        SyntaxError, r"expected ':'",
+        lambda m: "Esta instrução precisa terminar com dois pontos (:). "
+                  "Eles indicam o início do bloco recuado.",
+    ),
+    _regra(
         SyntaxError, r"unexpected EOF while parsing",
         lambda m: "O código terminou antes do esperado. Confira se você não esqueceu "
                   "de fechar algum parêntese, colchete ou aspas.",
     ),
     _regra(
-        SyntaxError, r"(?:EOL while scanning string literal|unterminated string literal)",
+        SyntaxError,
+        r"(?:EOL while scanning string literal|unterminated string literal|unterminated triple-quoted string literal)",
         lambda m: "Você abriu aspas para um texto, mas esqueceu de fechar antes do fim da linha.",
     ),
     _regra(
