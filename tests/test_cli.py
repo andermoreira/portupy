@@ -29,6 +29,23 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(1, status)
         self.assertIn("Uso:", stderr.getvalue())
 
+    def test_cli_exibe_ajuda(self):
+        """A CLI oferece ajuda sem exigir arquivo de entrada."""
+        stdout = io.StringIO()
+        with patch.object(sys, "argv", ["cli.py", "--help"]), contextlib.redirect_stdout(stdout):
+            status = cli.main()
+        self.assertEqual(0, status)
+        self.assertIn("transpilador-pt", stdout.getvalue())
+        self.assertIn("--exportar", stdout.getvalue())
+
+    def test_cli_exibe_versao(self):
+        """A versão pública do pacote pode ser consultada pela CLI."""
+        stdout = io.StringIO()
+        with patch.object(sys, "argv", ["cli.py", "--version"]), contextlib.redirect_stdout(stdout):
+            status = cli.main()
+        self.assertEqual(0, status)
+        self.assertIn("transpilador-pt 0.1.0", stdout.getvalue())
+
     def test_cli_executa_arquivo_padrao(self):
         """CLI executa o arquivo e retorna 0."""
         stdout = io.StringIO()
@@ -146,7 +163,14 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(1, status)
         self.assertIn("porta inválida", stderr.getvalue())
 
+    def test_cli_flag_desconhecida_retorna_erro_de_uso(self):
+        """Flags desconhecidas não são ignoradas silenciosamente."""
+        stderr = io.StringIO()
+        with patch.object(sys, "argv", ["cli.py", "--nao-existe"]), contextlib.redirect_stderr(stderr):
+            status = cli.main()
+        self.assertEqual(1, status)
+        self.assertIn("unrecognized arguments", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
-

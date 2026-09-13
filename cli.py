@@ -8,11 +8,13 @@ Uso:
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
 from transpilador_pt import (
     ErroDeTraducao,
+    __version__,
     executa_arquivo,
     renderiza_lado_a_lado,
     transpila_canonico,
@@ -20,51 +22,107 @@ from transpilador_pt import (
 from transpilador_pt.servidor import inicia_servidor_web
 
 
-def main() -> int:
-    args = sys.argv[1:]
-    if not args:
-        print(
-            "Uso: python3 cli.py [arquivo.ptpy | --web [porta]] [--mostrar-python] [--lado-a-lado] [--exportar [destino.py]]",
-            file=sys.stderr,
-        )
+MENSAGEM_USO = (
+    "Uso: python3 cli.py [arquivo.ptpy | --web [porta]] "
+    "[--mostrar-python] [--lado-a-lado] [--exportar [destino.py]]"
+)
+
+
+def _porta_argumento(valor: str) -> int:
+    try:
+        porta = int(valor)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"porta inválida '{valor}'") from exc
+    if not 0 <= porta <= 65535:
+        raise argparse.ArgumentTypeError("porta inválida: use um valor entre 0 e 65535")
+    return porta
+
+
+def cria_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="transpilador-pt",
+        description="Traduz e executa código Python escrito em português.",
+    )
+    parser.add_argument(
+        "arquivo",
+        nargs="?",
+        help="arquivo .ptpy para executar ou exportar",
+    )
+    parser.add_argument(
+        "--web",
+        nargs="?",
+        const=8000,
+        type=_porta_argumento,
+        metavar="PORTA",
+        help="inicia o playground web na porta informada (padrão: 8000)",
+    )
+    parser.add_argument(
+        "--mostrar-python",
+        action="store_true",
+        help="mostra o código Python intermediário antes da execução",
+    )
+    parser.add_argument(
+        "--lado-a-lado",
+        "--modo-transicao",
+        dest="modo_transicao",
+        action="store_true",
+        help="mostra o código em português e o Python canônico lado a lado",
+    )
+    parser.add_argument(
+        "--exportar",
+        nargs="?",
+        const="-",
+        metavar="DESTINO",
+        help="exporta para Python canônico; sem destino, imprime no stdout",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = cria_parser()
+    argumentos = sys.argv[1:] if argv is None else argv
+    try:
+        args = parser.parse_args(argumentos)
+    except SystemExit as exc:
+        # Mantém a API testável e os códigos de saída da CLI sob controle.
+        return 0 if exc.code == 0 else 1
+
+    if not argumentos:
+        print(MENSAGEM_USO, file=sys.stderr)
         return 1
 
     # Modo Playground Web (--web [porta])
-    if "--web" in args:
-        idx = args.index("--web")
-        porta = 8000
-        if idx + 1 < len(args) and not args[idx + 1].startswith("--"):
-            try:
-                porta = int(args[idx + 1])
-            except ValueError:
-                print(f"Erro: porta inválida '{args[idx + 1]}'.", file=sys.stderr)
-                return 1
-
+    if args.web is not None:
+        if args.arquivo or args.mostrar_python or args.modo_transicao or args.exportar is not None:
+            print("Erro: --web não pode ser combinado com arquivo ou outros modos.", file=sys.stderr)
+            return 1
         diretorio_web = Path(__file__).resolve().parent / "web"
         try:
-            inicia_servidor_web(diretorio_web, porta=porta, abrir_navegador=True, bloquear=True)
+            inicia_servidor_web(
+                diretorio_web,
+                porta=args.web,
+                abrir_navegador=True,
+                bloquear=True,
+            )
             return 0
         except Exception as exc:
             print(f"⚠️ Erro ao iniciar servidor web: {exc}", file=sys.stderr)
             return 1
 
-    # Identifica o arquivo de entrada (primeiro argumento posicional não-flag)
-    caminho_pt = None
-    for arg in args:
-        if not arg.startswith("--"):
-            caminho_pt = arg
-            break
-
-    if caminho_pt is None:
+    if args.arquivo is None:
         print("Erro: nenhum arquivo de entrada informado.", file=sys.stderr)
         return 1
 
+    caminho_pt = args.arquivo
+
     # Modo Exportar (--exportar [destino.py])
-    if "--exportar" in args:
-        idx = args.index("--exportar")
-        destino = None
-        if idx + 1 < len(args) and not args[idx + 1].startswith("--"):
-            destino = args[idx + 1]
+    if args.exportar is not None:
+        destino = None if args.exportar == "-" else args.exportar
 
         try:
             with open(caminho_pt, "r", encoding="utf-8") as f:
@@ -93,7 +151,7 @@ def main() -> int:
             return 1
 
     # Modo Lado a Lado / Transição (--lado-a-lado ou --modo-transicao)
-    if "--lado-a-lado" in args or "--modo-transicao" in args:
+    if args.modo_transicao:
         try:
             with open(caminho_pt, "r", encoding="utf-8") as f:
                 codigo_pt = f.read()
@@ -108,8 +166,7 @@ def main() -> int:
             print(f"Erro ao traduzir: {exc}", file=sys.stderr)
             return 1
 
-    mostrar_python = "--mostrar-python" in args
-    return executa_arquivo(caminho_pt, mostrar_python=mostrar_python)
+    return executa_arquivo(caminho_pt, mostrar_python=args.mostrar_python)
 
 
 if __name__ == "__main__":

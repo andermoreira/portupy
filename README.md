@@ -60,6 +60,10 @@ python3 cli.py transpilador_pt/exemplos/condicionais.ptpy --mostrar-python
 
 # 6. Executar a suíte completa de testes automatizados
 python3 -m unittest discover -s tests -p "test_*.py"
+
+# 7. Consultar ajuda e versão da CLI
+python3 cli.py --help
+python3 cli.py --version
 ```
 
 O primeiro acesso ao Playground precisa de internet para baixar o runtime Pyodide.
