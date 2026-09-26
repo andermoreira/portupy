@@ -41,7 +41,10 @@ português. `ouse` é mantido apenas por compatibilidade com versões anteriores
 | `enumere`, `zip`, `mapeie`, `filtre` | `enumerate`, `zip`, `map`, `filter` |
 
 Esses nomes são injetados no executor local. O modo `--exportar` os substitui pelos nomes
-canônicos para que o arquivo gerado não dependa do pacote.
+canônicos para que o arquivo gerado não dependa do pacote. Um nome que o programa vincula
+(variável, parâmetro, função, import) continua com a grafia do aluno: em
+`lista = [1, 2]` o nome `lista` é preservado. Sem vínculo, o nome vira o builtin mesmo quando
+usado como valor, como em `isinstance(x, inteiro)` → `isinstance(x, int)`.
 
 ## O que permanece Python
 

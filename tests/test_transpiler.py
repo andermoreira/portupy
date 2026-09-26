@@ -317,7 +317,7 @@ class TestFStringCanonica(unittest.TestCase):
         """':' de format spec e de slice não devem quebrar a extração da expressão."""
         saida_spec = self._canonico_compilavel('x = f"{tamanho(a):>10}"\n')
         self.assertIn("{len(a):>10}", saida_spec)
-        saida_slice = self._canonico_compilavel('x = f"{lista[1:2]}"\n')
+        saida_slice = self._canonico_compilavel('lista = [1, 2]\nx = f"{lista[1:2]}"\n')
         self.assertIn("lista[1:2]", saida_slice)
 
     def test_fstring_aninhada_e_aspas_triplas(self):
@@ -355,6 +355,102 @@ class TestFStringRuntime(unittest.TestCase):
     def test_palavra_reservada_em_fstring_nao_e_engolida(self):
         with self.assertRaises(ErroDeTraducao):
             transpila('x = f"{(se := 1)}"\n')
+
+
+class TestComandosEmUmaLinha(unittest.TestCase):
+    """Headers of compound statements may carry an inline body with assignments."""
+
+    def _executa(self, codigo_py):
+        namespace = {}
+        exec(compile(codigo_py, "<linha>", "exec"), namespace)
+        return namespace
+
+    def test_corpo_na_mesma_linha_nao_e_atribuicao_a_palavra_chave(self):
+        casos = {
+            "total = 0\npara i em intervalo(3): total += i\n": ("total", 3),
+            "x = 0\nenquanto x < 3: x += 1\n": ("x", 3),
+            "x = 1\ny = 0\nse x eh 1: y = 2\n": ("y", 2),
+            "x = 1\ny = 0\nse x nao eh 2: y = 2\n": ("y", 2),
+            "y = 0\nse falso: y = 1\nsenao: y = 2\n": ("y", 2),
+        }
+        for codigo_pt, (nome, esperado) in casos.items():
+            with self.subTest(codigo_pt=codigo_pt):
+                self.assertEqual(esperado, self._executa(transpila_canonico(codigo_pt))[nome])
+
+    def test_ponto_e_virgula_encerra_a_checagem_de_atribuicao(self):
+        codigo_py = transpila_canonico("mostre(1); y = 2\n")
+        self.assertIn("print(1)", codigo_py)
+        self.assertNotIn("mostre", codigo_py)
+
+    def test_exportacao_traduz_builtin_no_corpo_inline(self):
+        codigo_py = transpila_canonico("total = 0\npara i em intervalo(3): total += i\n")
+        self.assertIn("range(3)", codigo_py)
+
+
+class TestTiposComoValor(unittest.TestCase):
+    """Export must translate builtin types used as values, not only as calls."""
+
+    def test_tipo_como_argumento_e_comparacao(self):
+        codigo_py = transpila_canonico(
+            "r = isinstance(1, inteiro)\ns = tipo('a') eh texto\n"
+        )
+        namespace = {}
+        exec(compile(codigo_py, "<tipos>", "exec"), namespace)
+        self.assertTrue(namespace["r"])
+        self.assertTrue(namespace["s"])
+
+    def test_variavel_do_aluno_com_nome_de_tipo_continua_protegida(self):
+        codigo_py = transpila_canonico(
+            "lista = [1, 2]\nfuncao f(texto):\n    retorne texto\nmostre(f(lista))\n"
+        )
+        self.assertIn("f(lista)", codigo_py)
+        self.assertIn("return texto", codigo_py)
+
+
+class TestAnotacoesNaExportacao(unittest.TestCase):
+    """Annotations are evaluated at module level, so their types must be canonical."""
+
+    def _executa(self, codigo_pt):
+        codigo_py = transpila_canonico(codigo_pt)
+        namespace = {}
+        exec(compile(codigo_py, "<anotacao>", "exec"), namespace)
+        return codigo_py, namespace
+
+    def test_tipo_anotado_em_variavel_de_modulo(self):
+        for codigo_pt in ("x: inteiro = 1\n", "x: lista[inteiro] = []\n", "x: inteiro\n"):
+            with self.subTest(codigo_pt=codigo_pt):
+                codigo_py, _ = self._executa(codigo_pt)
+                self.assertNotIn("inteiro", codigo_py)
+
+    def test_anotacao_no_corpo_inline_preserva_o_alvo(self):
+        codigo_py, namespace = self._executa("x = 1\nse x: lista: inteiro = [1]\nmostre(lista)\n")
+        self.assertIn("lista: int = [1]", codigo_py)
+        self.assertEqual([1], namespace["lista"])
+
+    def test_alvo_anotado_com_subscrito_ou_atributo(self):
+        for codigo_pt in ("x = [0]\nx[0]: inteiro = 1\n", "class C: pass\nc = C()\nc.a: inteiro = 1\n"):
+            with self.subTest(codigo_pt=codigo_pt):
+                codigo_py, _ = self._executa(codigo_pt)
+                self.assertNotIn("inteiro", codigo_py)
+
+    def test_case_inline_com_anotacao(self):
+        codigo_py = transpila_canonico(
+            "match 1:\n    case 1: lista: inteiro = [1]\n"
+        )
+        self.assertIn("lista: int = [1]", codigo_py)
+
+    def test_muitos_dois_pontos_numa_linha_nao_explode(self):
+        import time
+        codigo_pt = "f = " + "lambda a: " * 40 + "tamanho(a)\n"
+        inicio = time.perf_counter()
+        codigo_py = transpila_canonico(codigo_pt)
+        self.assertLess(time.perf_counter() - inicio, 2.0)
+        self.assertIn("len(a)", codigo_py)
+
+    def test_palavra_reservada_anotada_no_corpo_inline_e_rejeitada(self):
+        with self.assertRaises(ErroDeTraducao) as ctx:
+            transpila("x = 1\nse x: para: inteiro = 1\n")
+        self.assertIn("palavra reservada", str(ctx.exception))
 
 
 if __name__ == "__main__":

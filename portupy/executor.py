@@ -42,6 +42,10 @@ def executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> int:
         # intencional (não é sandbox). Ver a docstring da função para o porquê.
         contexto = {"__name__": "__main__", **BUILTINS_PT}
         exec(compilado, contexto)
+    except KeyboardInterrupt:
+        # Ctrl+C num laço infinito é comum para iniciantes: sem traceback.
+        print("\n⏹️  Programa interrompido (Ctrl+C).", file=sys.stderr)
+        return 130
     except Exception as exc:
         print(
             formata_erro_amigavel(exc, linhas_fonte_pt, codigo_python.splitlines()),

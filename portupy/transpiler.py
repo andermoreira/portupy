@@ -29,6 +29,53 @@ class ErroDeTraducao(Exception):
 _FSTRING_MIDDLE = getattr(token, "FSTRING_MIDDLE", -1)
 
 
+_INICIO_DE_COMANDO = (token.NEWLINE, token.NL, token.INDENT, token.DEDENT, token.ENCODING)
+
+# First words of compound statements whose ':' opens a block ("se x: y = 1").
+_ABRE_BLOCO = {
+    "if", "elif", "else", "while", "for", "try", "except", "finally",
+    "with", "def", "class", "async", "match", "case",
+}
+
+
+def _inicio_do_comando(tokens: list[tokenize.TokenInfo], idx: int) -> int:
+    """Return the index of the first token of the statement containing ``idx``.
+
+    Statements are delimited by line ends, ';' and the ':' that closes a block
+    header, so "se x: lista = 1" yields "lista" as the start of the inline body.
+    Linear: one pass back to the logical line start, one pass forward.
+    """
+    profundidade = 0
+    k = idx - 1
+    while k >= 0:
+        tok = tokens[k]
+        if tok.type == token.OP and tok.string in ")]}":
+            profundidade += 1
+        elif tok.type == token.OP and tok.string in "([{":
+            profundidade -= 1
+        elif profundidade <= 0 and (
+            tok.type in _INICIO_DE_COMANDO or (tok.type == token.OP and tok.string == ";")
+        ):
+            break
+        k -= 1
+
+    inicio = k + 1
+    profundidade = 0
+    for pos in range(inicio, idx):
+        tok = tokens[pos]
+        if tok.type != token.OP:
+            continue
+        if tok.string in "([{":
+            profundidade += 1
+        elif tok.string in ")]}":
+            profundidade = max(0, profundidade - 1)
+        elif tok.string == ":" and profundidade == 0:
+            primeira = tokens[inicio].string
+            if MAPA.get(primeira, primeira) in _ABRE_BLOCO:
+                inicio = pos + 1
+    return inicio
+
+
 ASSIGNMENT_OPERATORS = {
     "=", ":=", "+=", "-=", "*=", "/=", "//=", "%=", "**=",
     "<<=", ">>=", "&=", "|=", "^=", "@=",
@@ -59,8 +106,31 @@ def _has_assignment_until_statement_end(
     tradução na exportação canônica.
     """
     resto = tokens[start + 1:]
+    inicio = _inicio_do_comando(tokens, start)
+    abre_comando = inicio == start
+    # "x: inteiro = 1" / "x[0]: inteiro = 1": names after the annotation ':'
+    # are the type, not the target. _inicio_do_comando already skipped any
+    # block-header ':', so a ':' at depth 0 here can only be an annotation.
+    profundidade = 0
+    for tok in tokens[inicio:start]:
+        if tok.type != token.OP:
+            continue
+        if tok.string in "([{":
+            profundidade += 1
+        elif tok.string in ")]}":
+            profundidade = max(0, profundidade - 1)
+        elif tok.string == ":" and profundidade == 0:
+            return False
     nesting = 0
     for pos, tok in enumerate(resto):
+        if tok.type == token.OP and nesting == 0 and (
+            tok.string == ";" or (tok.string == ":" and not (pos == 0 and abre_comando))
+        ):
+            # ';' ends the simple statement and a ':' closes a compound header
+            # ("para i em x: total += i"), so what follows is the inline body.
+            # The only exception is an annotation ("para: inteiro = 1"), where
+            # the ':' comes right after the name that opens the statement.
+            return False
         if tok.type == token.OP:
             if tok.string in "([{":
                 nesting += 1
@@ -232,6 +302,65 @@ def _substitui_em_fstring(
 
 
 
+_FECHA = {"(": ")", "[": "]", "{": "}"}
+
+
+def _tokeniza(leitor) -> list[tokenize.TokenInfo]:
+    """Tokenize the source, turning tokenizer failures into Portuguese hints."""
+    fluxo: list[tokenize.TokenInfo] = []
+    abertos: list[tokenize.TokenInfo] = []
+    try:
+        for tok in tokenize.generate_tokens(leitor):
+            fluxo.append(tok)
+            if tok.type == token.OP and tok.string in _FECHA:
+                abertos.append(tok)
+            elif tok.type == token.OP and tok.string in ")]}" and abertos:
+                abertos.pop()
+    except IndentationError as exc:
+        raise ErroDeTraducao(
+            f"linha {exc.lineno}: o recuo desta linha não combina com nenhum bloco "
+            "anterior. Alinhe os espaços do início da linha com o bloco correspondente."
+        ) from exc
+    except tokenize.TokenError as exc:
+        # An unclosed quote shows up as TokenError on 3.12+ and as a stray
+        # ERRORTOKEN on older versions; it is the root cause either way.
+        aspas = next(
+            (t for t in fluxo if t.type == token.ERRORTOKEN and t.string.strip() in ("'", '"')),
+            None,
+        )
+        mensagem = str(exc.args[0]) if exc.args else ""
+        if aspas is not None or "string" in mensagem:
+            linha = f"linha {aspas.start[0]}: " if aspas is not None else ""
+            raise ErroDeTraducao(
+                f"{linha}um texto entre aspas não foi fechado. "
+                "Confira se todas as aspas abertas têm o par de fechamento."
+            ) from exc
+        if abertos and "multi-line statement" in mensagem:
+            aberto = abertos[-1]
+            raise ErroDeTraducao(
+                f"linha {aberto.start[0]}: o '{aberto.string}' aberto aqui não foi "
+                f"fechado. Confira se falta um '{_FECHA[aberto.string]}'."
+            ) from exc
+        if "multi-line statement" in mensagem:
+            raise ErroDeTraducao(
+                "o código terminou no meio de uma instrução. Confira se a última "
+                "linha não termina com '\\' ou com uma expressão incompleta."
+            ) from exc
+        raise ErroDeTraducao(f"Não consegui interpretar o código: {mensagem}") from exc
+    return fluxo
+
+
+def _erro_de_comparacao(linha: int) -> ErroDeTraducao:
+    return ErroDeTraducao(
+        f"linha {linha}: numa condição, use '==' (ou 'eh') para comparar. "
+        "Um '=' sozinho serve para guardar um valor numa variável."
+    )
+
+
+def _eh_operador_de_atribuicao(tok: tokenize.TokenInfo | None) -> bool:
+    return tok is not None and tok.type == token.OP and tok.string in ASSIGNMENT_OPERATORS
+
+
 def _transpila_core(
     codigo_pt: str,
     traduzir_builtins: bool = False,
@@ -241,10 +370,7 @@ def _transpila_core(
     tokens_saida = []
     leitor = io.StringIO(codigo_pt).readline
 
-    try:
-        fluxo = list(tokenize.generate_tokens(leitor))
-    except (tokenize.TokenError, IndentationError) as exc:
-        raise ErroDeTraducao(f"Não consegui interpretar o código: {exc}") from exc
+    fluxo = _tokeniza(leitor)
 
     scope_infos: list[ScopeInfo] = []
     parameter_indices: set[int] = set()
@@ -304,6 +430,8 @@ def _transpila_core(
                 and proximo.start[0] == inicio[0]
             ):
                 if _has_assignment_until_statement_end(fluxo, i):
+                    if not _eh_operador_de_atribuicao(proximo_2):
+                        raise _erro_de_comparacao(inicio[0])
                     raise ErroDeTraducao(
                         f"linha {inicio[0]}: '{valor} se' é uma palavra reservada nesta "
                         f"linguagem (equivale a 'elif' em Python) e não pode "
@@ -356,7 +484,20 @@ def _transpila_core(
                 # Checagem amigável: usar uma palavra reservada como alvo de
                 # atribuição ("para = 5") gera um SyntaxError confuso depois
                 # da tradução. Detectamos aqui e explicamos o motivo real.
-                if _has_assignment_until_statement_end(fluxo, i):
+                # "senao: y = 2" is a header with an inline body, not an annotation.
+                eh_cabecalho_sem_condicao = (
+                    MAPA[valor] in ("else", "try", "finally")
+                    and proximo is not None
+                    and proximo.string == ":"
+                )
+                if not eh_cabecalho_sem_condicao and _has_assignment_until_statement_end(fluxo, i):
+                    # "se x = 1:" is a comparison typo, not a keyword used as a name.
+                    if (
+                        MAPA[valor] in ("if", "elif", "while")
+                        and not _eh_operador_de_atribuicao(proximo)
+                        and not (proximo is not None and proximo.string == ":")
+                    ):
+                        raise _erro_de_comparacao(inicio[0])
                     raise ErroDeTraducao(
                         f"linha {inicio[0]}: '{valor}' é uma palavra reservada nesta "
                         f"linguagem (equivale a '{MAPA[valor]}' em Python) e não pode "
@@ -380,13 +521,7 @@ def _transpila_core(
                     i in parameter_indices
                     or valor in names_protected_for(tok)
                 )
-                
-                # Tipos embutidos ("lista", "conjunto", "tupla", etc.) só viram "list", "set", etc.
-                # se forem chamados como construtores com '(' ou usados em anotação de tipo.
-                # Caso contrário, representam variáveis do aluno (ex.: tamanho(lista)).
-                eh_tipo_embutido = valor in ("lista", "dicionario", "dicionário", "conjunto", "tupla", "texto", "inteiro", "decimal", "booleano")
-                eh_chamada_ou_anotacao = (proximo is not None and proximo.string == "(") or (anterior is not None and anterior.string in (":", "->", "["))
-                
+
                 if (
                     not eh_definicao_funcao
                     and not eh_nome_declaracao
@@ -394,8 +529,7 @@ def _transpila_core(
                     and not eh_alvo_atribuicao
                     and not eh_nome_vinculado
                 ):
-                    if not eh_tipo_embutido or eh_chamada_ou_anotacao:
-                        valor = BUILTINS_CANONICOS[valor]
+                    valor = BUILTINS_CANONICOS[valor]
 
         elif tipo == token.STRING:
             # Pre-3.12 f-strings are a single STRING token. Without rewriting

@@ -14,8 +14,10 @@ primeiro que casar vence.
 from __future__ import annotations
 
 import re
-from difflib import SequenceMatcher
+from difflib import SequenceMatcher, get_close_matches
 from typing import Callable
+
+from .dicionario import BUILTINS_CANONICOS, PALAVRAS_CHAVE
 
 Regra = tuple[type[BaseException], re.Pattern, Callable[[re.Match], str]]
 
@@ -72,6 +74,12 @@ REGRAS: list[Regra] = [
         lambda m: f"Você tentou somar um valor do tipo {m.group(1)} com um do "
                   f"tipo {m.group(2)}. Provavelmente precisa converter um deles "
                   "antes (ex.: com 'texto(...)' ou 'inteiro(...)').",
+    ),
+    _regra(
+        TypeError, r"unsupported operand type\(s\) for ([^:]+): '(\w+)' and '(\w+)'",
+        lambda m: f"A operação {m.group(1)} não funciona entre um valor do tipo "
+                  f"{m.group(2)} e um do tipo {m.group(3)}. Confira os valores ou "
+                  "converta um deles antes (ex.: com 'inteiro(...)' ou 'decimal(...)').",
     ),
     _regra(
         TypeError, r'can only concatenate str \(not "(\w+)"\) to str',
@@ -147,6 +155,12 @@ REGRAS: list[Regra] = [
                   "para a direita, pois ela faz parte do bloco acima. Use 4 espaços ou Tab.",
     ),
     _regra(
+        IndentationError, r"unexpected indent",
+        lambda m: "Esta linha tem um recuo (espaços no início) que não era esperado. "
+                  "Só as linhas dentro de um bloco (depois de uma linha terminada em ':') "
+                  "ficam recuadas; alinhe-a com a linha anterior.",
+    ),
+    _regra(
         IndentationError, r"unindent does not match any outer indentation level",
         lambda m: "A indentação desta linha não está alinhada com nenhuma linha anterior. "
                   "Verifique os espaços no início da linha para alinhar com o bloco correspondente.",
@@ -186,6 +200,22 @@ def traduz_excecao(exc: BaseException) -> str | None:
             if casamento:
                 return gerador(casamento)
     return None
+
+
+_VOCABULARIO_PT = sorted(set(BUILTINS_CANONICOS) | set(PALAVRAS_CHAVE))
+
+
+def _sugestao_de_nome(exc: BaseException) -> str | None:
+    """Suggest the closest Portuguese builtin/keyword for a mistyped name."""
+    if not isinstance(exc, NameError) or isinstance(exc, UnboundLocalError):
+        return None
+    nome = getattr(exc, "name", None)
+    if not nome:
+        return None
+    parecidos = get_close_matches(nome, _VOCABULARIO_PT, n=1, cutoff=0.75)
+    if not parecidos or parecidos[0] == nome:
+        return None
+    return f"Você quis dizer '{parecidos[0]}'?"
 
 
 def _map_generated_column_to_source(column: int, source_line: str, generated_line: str) -> int:
@@ -263,6 +293,9 @@ def formata_erro_amigavel(
     explicacao = traduz_excecao(exc)
     if explicacao:
         partes.append(f"   {explicacao}")
+        sugestao = _sugestao_de_nome(exc)
+        if sugestao:
+            partes.append(f"   {sugestao}")
     else:
         partes.append(f"   Detalhe técnico (ainda sem tradução): {exc}")
 

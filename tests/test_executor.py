@@ -160,5 +160,66 @@ class TestExecutor(unittest.TestCase):
                     self.assertEqual(0, status, stderr.getvalue())
 
 
+class TestMensagensParaIniciantes(unittest.TestCase):
+    """Common beginner mistakes must be explained in Portuguese, never raw."""
+
+    def _erro(self, codigo_pt):
+        f = io.StringIO()
+        with contextlib.redirect_stderr(f):
+            status = executa_codigo(codigo_pt)
+        self.assertEqual(1, status)
+        saida = f.getvalue()
+        self.assertNotIn("ainda sem tradução", saida)
+        self.assertNotIn("Traceback", saida)
+        return saida
+
+    def test_parentese_nao_fechado_aponta_a_linha_de_abertura(self):
+        saida = self._erro("x = 1\nmostre((1)\ny = 2\n")
+        self.assertIn("linha 2", saida)
+        self.assertIn("'('", saida)
+        self.assertNotIn("unexpected EOF", saida)
+
+    def test_aspas_nao_fechadas_tem_prioridade_sobre_parentese(self):
+        saida = self._erro('mostre("abc\n')
+        self.assertIn("aspas", saida)
+        self.assertNotIn("'('", saida)
+
+    def test_continuacao_de_linha_no_fim_nao_culpa_aspas(self):
+        saida = self._erro("x = 1 + \\\n")
+        self.assertNotIn("aspas", saida)
+
+    def test_anotacao_em_palavra_de_condicao_continua_reservada(self):
+        saida = self._erro("se: inteiro = 1\n")
+        self.assertIn("palavra reservada", saida)
+
+    def test_atribuicao_no_lugar_de_comparacao_em_condicao(self):
+        for codigo_pt in ("x = 1\nse x = 1:\n    passe\n", "x = 1\nenquanto x = 1:\n    passe\n"):
+            with self.subTest(codigo_pt=codigo_pt):
+                saida = self._erro(codigo_pt)
+                self.assertIn("==", saida)
+                self.assertNotIn("nome de variável", saida)
+
+    def test_recuo_inesperado(self):
+        saida = self._erro("x = 1\n    y = 2\n")
+        self.assertIn("recuo", saida)
+
+    def test_operacao_entre_tipos_incompativeis(self):
+        saida = self._erro('x = "a" - 1\n')
+        self.assertIn("str", saida)
+        self.assertIn("int", saida)
+
+    def test_nome_parecido_com_builtin_sugere_correcao(self):
+        saida = self._erro('mostrar("oi")\n')
+        self.assertRegex(saida, r"Você quis dizer 'mostr[ae]'\?")
+
+    def test_interrupcao_pelo_teclado_encerra_sem_traceback(self):
+        from unittest import mock
+        f = io.StringIO()
+        with mock.patch("builtins.exec", side_effect=KeyboardInterrupt), contextlib.redirect_stderr(f):
+            status = executa_codigo("mostre(1)\n")
+        self.assertEqual(130, status)
+        self.assertIn("interrompido", f.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()
