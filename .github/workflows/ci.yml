@@ -98,12 +98,16 @@ jobs:
           wheel = glob.glob(os.path.join(os.environ["RUNNER_TEMP"], "wheel", "*.whl"))[0]
           names = set(zipfile.ZipFile(wheel).namelist())
           required = {
-              "cli.py",
-              "web/index.html",
-              "web/vendor/pyodide/v0.26.4/full/pyodide.js",
-              "web/vendor/pyodide/v0.26.4/full/pyodide.asm.wasm",
+              "portupy/cli.py",
+              "portupy/web/index.html",
+              "portupy/web/vendor/pyodide/v0.26.4/full/pyodide.js",
+              "portupy/web/vendor/pyodide/v0.26.4/full/pyodide.asm.wasm",
           }
           missing = sorted(required - names)
           if missing:
               sys.exit(f"Missing package files: {missing}")
+          # Only the portupy namespace may be installed into site-packages.
+          top_level = sorted({n.split("/")[0] for n in names if not n.split("/")[0].endswith(".dist-info")})
+          if top_level != ["portupy"]:
+              sys.exit(f"Unexpected top-level entries: {top_level}")
           PY

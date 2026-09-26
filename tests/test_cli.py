@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import cli
+from portupy import cli
 
 
 class TestCLI(unittest.TestCase):
@@ -139,7 +139,7 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_web_padrao(self):
         """CLI com --web chama inicia_servidor_web na porta padrão 8000 (AC-07)."""
-        with patch("cli.inicia_servidor_web") as mock_inicia:
+        with patch("portupy.cli.inicia_servidor_web") as mock_inicia:
             with patch.object(sys, "argv", ["cli.py", "--web"]):
                 status = cli.main()
         self.assertEqual(0, status)
@@ -148,7 +148,7 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_web_porta_customizada(self):
         """CLI com --web 9000 passa porta customizada (AC-07)."""
-        with patch("cli.inicia_servidor_web") as mock_inicia:
+        with patch("portupy.cli.inicia_servidor_web") as mock_inicia:
             with patch.object(sys, "argv", ["cli.py", "--web", "9000"]):
                 status = cli.main()
         self.assertEqual(0, status)
@@ -157,7 +157,7 @@ class TestCLI(unittest.TestCase):
 
     def test_cli_web_sem_navegador(self):
         """A CLI permite iniciar o playground em ambiente sem interface gráfica."""
-        with patch("cli.inicia_servidor_web") as mock_inicia:
+        with patch("portupy.cli.inicia_servidor_web") as mock_inicia:
             with patch.object(sys, "argv", ["cli.py", "--web", "--sem-navegador"]):
                 status = cli.main()
         self.assertEqual(0, status)
@@ -187,6 +187,29 @@ class TestCLI(unittest.TestCase):
             status = cli.main()
         self.assertEqual(1, status)
         self.assertIn("só pode ser usado com --web", stderr.getvalue())
+
+    def test_cli_exportar_nao_ignora_outros_modos_em_silencio(self):
+        for flag in ("--lado-a-lado", "--mostrar-python"):
+            stderr = io.StringIO()
+            with self.subTest(flag=flag), contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(io.StringIO()):
+                status = cli.main([self.script_pt, "--exportar", flag])
+            self.assertEqual(1, status)
+            self.assertIn("--exportar não pode ser combinado", stderr.getvalue())
+
+    def test_atalho_da_raiz_executa_a_cli(self):
+        raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        processo = subprocess.run(
+            [sys.executable, os.path.join(raiz, "cli.py"), self.script_pt],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=raiz,
+        )
+        self.assertEqual(0, processo.returncode, processo.stderr)
+        self.assertEqual("ola mundo\n", processo.stdout)
+
+    def test_diretorio_web_padrao_contem_o_playground(self):
+        self.assertTrue((cli.diretorio_web_padrao() / "index.html").is_file())
 
 
 if __name__ == "__main__":

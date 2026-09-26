@@ -70,6 +70,7 @@ portupy/
 ├── executor.py      # compila e roda com injeção de builtins PT
 ├── servidor.py      # servidor HTTP estático local para o playground web
 ├── bundle_web.py   # gera o payload das fontes para o ambiente WebAssembly
+├── cli.py          # interface de linha de comando (comando `portupy`)
 └── exemplos/
     ├── ola.ptpy
     ├── condicionais.ptpy
@@ -83,7 +84,7 @@ portupy/
     ├── fizzbuzz.ptpy
     ├── fibonacci.ptpy
     └── textos.ptpy
-web/                # playground web executado no cliente com Pyodide (Wasm)
+web/                # playground web com Pyodide (Wasm); instalado como portupy/web
 ├── index.html      # interface com editor, console e abas bilíngues
 ├── style.css       # estilos do playground em modo escuro
 ├── app.js          # integração com Pyodide e execução no navegador
@@ -93,7 +94,7 @@ web/                # playground web executado no cliente com Pyodide (Wasm)
 adr/                # Architecture Decision Records (ADR 001, ADR 002, ADR 003, ADR 004)
 specs/              # especificações ativas, arquivadas e passos de implementação
 tests/              # suíte de testes automatizados (unittest)
-cli.py              # interface de linha de comando com modos de execução, transição, exportação e web
+cli.py              # atalho para rodar a CLI no repositório (python3 cli.py ...)
 LICENSE             # licença MIT
 PUBLISHING.md       # guia de publicação no PyPI
 ```
@@ -169,7 +170,7 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 - **Operadores compostos de negação e pertinência (ADR-002):** Expressões como `nao eh` (`is not` / `!=`) e `nao em` (`not in`) funcionam naturalmente.
 - **Modo de transição bilíngue (ADR-003):** A flag `--lado-a-lado` (ou `--modo-transicao`) exibe uma tabela comparativa sincronizada linha a linha entre o código em português e o Python canônico, com ajuste automático à largura do terminal.
 - **Exportador para Python canônico (ADR-003):** A flag `--exportar [destino.py]` traduz chamadas de builtins pedagógicos (`mostre` → `print`, `tamanho` → `len`, `intervalo` → `range`, etc.) e gera scripts Python independentes, que rodam diretamente em qualquer interpretador padrão sem o transpilador.
-- **Playground web com Pyodide (ADR-004):** Aplicação que executa o código no navegador via WebAssembly (Wasm). Inclui editor em português, visualização bilíngue lado a lado, exportação e catálogo de exemplos didáticos. Não requer instalação local nem servidor backend.
+- **Playground web com Pyodide (ADR-004):** Aplicação que executa o código no navegador via WebAssembly (Wasm). Inclui editor em português, visualização bilíngue lado a lado, exportação e catálogo de exemplos didáticos. Não requer instalação local nem servidor backend. O editor mantém o recuo ao pressionar Enter (e recua após `:`), remove recuo com Shift+Tab, guarda o rascunho no navegador e libera a saída pelo teclado com Esc seguido de Tab.
 - **Execução em Worker no navegador:** O Pyodide roda em um Worker dedicado. Se a execução ultrapassar 10 segundos, o Worker é encerrado e um ambiente novo é inicializado sem bloquear a interface.
 - **Nomes de variáveis comuns:** Nomes como `lista = [1, 2, 3]`, `texto = "olá"` e `tipo = 10` podem ser usados sem colidir com palavras reservadas nem ser alterados indevidamente na exportação.
 - **Preservação de atributos de objetos:** Acessos e atribuições como `objeto.tipo` e `self.tipo = valor` são preservados sem substituição indevida de tokens.

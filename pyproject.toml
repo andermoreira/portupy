@@ -43,21 +43,23 @@ Repository = "https://github.com/andermoreira/portupy"
 Issues = "https://github.com/andermoreira/portupy/issues"
 
 [project.scripts]
-portupy = "cli:main"
+portupy = "portupy.cli:main"
 
 [tool.setuptools]
 include-package-data = true
-py-modules = ["cli"]
+# The playground stays in web/ in the repo but installs as portupy/web, so the
+# wheel only ships the portupy namespace (no generic top-level "web" or "cli").
+packages = ["portupy", "portupy.web"]
+
+[tool.setuptools.package-dir]
+"portupy.web" = "web"
 
 [tool.setuptools.dynamic]
 version = { attr = "portupy.__version__" }
 
-[tool.setuptools.packages.find]
-include = ["portupy*", "web"]
-
 [tool.setuptools.package-data]
 portupy = ["exemplos/*.ptpy"]
-web = [
+"portupy.web" = [
   "*.html",
   "*.css",
   "*.js",
