@@ -149,3 +149,49 @@ test('explica de forma amigável que a entrada com leia não funciona no navegad
     'EntradaIndisponivelError'
   );
 });
+
+test('Enter mantém o recuo e recua após dois-pontos', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#code-editor');
+  await editor.fill('');
+  await editor.pressSequentially('se verdadeiro:');
+  await editor.press('Enter');
+  await editor.pressSequentially('x = 1');
+  await editor.press('Enter');
+  await editor.pressSequentially('y = 2');
+
+  await expect(editor).toHaveValue('se verdadeiro:\n    x = 1\n    y = 2');
+});
+
+test('Shift+Tab remove o recuo da linha em vez de inserir espaços', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#code-editor');
+  await editor.fill('se verdadeiro:\n        x = 1');
+  await editor.press('End');
+  await editor.press('Shift+Tab');
+
+  await expect(editor).toHaveValue('se verdadeiro:\n    x = 1');
+});
+
+test('Esc libera o Tab para sair do editor pelo teclado', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#code-editor');
+  await editor.fill('mostre(1)');
+  await editor.press('Escape');
+  await editor.press('Tab');
+
+  await expect(editor).not.toBeFocused();
+  await expect(editor).toHaveValue('mostre(1)');
+});
+
+test('preserva o código digitado ao recarregar a página', async ({ page }) => {
+  await page.goto('/');
+
+  await page.locator('#code-editor').fill('mostre("rascunho salvo")');
+  await page.reload();
+
+  await expect(page.locator('#code-editor')).toHaveValue('mostre("rascunho salvo")');
+});

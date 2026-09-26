@@ -204,11 +204,34 @@
     editorStats.textContent = `Linha ${linha}, Coluna ${coluna}`;
   }
 
-  editor.addEventListener('input', () => {
+  // Rascunho local: evita perder o código ao recarregar a página. O acesso ao
+  // localStorage pode falhar (modo privado, bloqueio de cookies), então é opcional.
+  const CHAVE_RASCUNHO = 'portupy:rascunho';
+
+  function leRascunho() {
+    try {
+      return window.localStorage.getItem(CHAVE_RASCUNHO);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function salvaRascunho() {
+    try {
+      window.localStorage.setItem(CHAVE_RASCUNHO, editor.value);
+    } catch (error) {
+      // Sem armazenamento disponível: o editor segue funcionando normalmente.
+    }
+  }
+
+  function aposEdicao() {
     atualizaLinhas();
     atualizaCursorStats();
     atualizaSyntaxHighlight();
-  });
+    salvaRascunho();
+  }
+
+  editor.addEventListener('input', aposEdicao);
 
   editor.addEventListener('click', atualizaCursorStats);
   editor.addEventListener('keyup', atualizaCursorStats);
@@ -219,23 +242,85 @@
     syntaxHighlight.scrollLeft = editor.scrollLeft;
   });
 
-  // Trata tecla Tab (insere 4 espaços)
+  const RECUO = '    ';
+
+  // Substitui o trecho [inicio, fim) preservando o histórico de desfazer
+  // (Ctrl+Z) quando o navegador suporta insertText.
+  function substituiTrecho(inicio, fim, texto) {
+    editor.focus();
+    editor.setSelectionRange(inicio, fim);
+    let inserido = false;
+    try {
+      inserido = document.execCommand('insertText', false, texto);
+    } catch (error) {
+      inserido = false;
+    }
+    if (!inserido) {
+      editor.setRangeText(texto, inicio, fim, 'end');
+      aposEdicao();
+    }
+  }
+
+  function inicioDaLinha(posicao) {
+    return editor.value.lastIndexOf('\n', posicao - 1) + 1;
+  }
+
+  function removeRecuo() {
+    const inicio = inicioDaLinha(editor.selectionStart);
+    const espacos = editor.value.slice(inicio).match(/^ {1,4}/);
+    if (!espacos) return;
+    const cursor = editor.selectionStart;
+    substituiTrecho(inicio, inicio + espacos[0].length, '');
+    const novaPosicao = Math.max(inicio, cursor - espacos[0].length);
+    editor.setSelectionRange(novaPosicao, novaPosicao);
+  }
+
+  function quebraLinhaComRecuo() {
+    const inicio = inicioDaLinha(editor.selectionStart);
+    const linhaAteCursor = editor.value.slice(inicio, editor.selectionStart);
+    let recuo = linhaAteCursor.match(/^[ \t]*/)[0];
+    // Após o cabeçalho de um bloco (se ...:, para ...:) o corpo vai um nível à direita.
+    if (!/^\s*#/.test(linhaAteCursor) && /:\s*(#.*)?$/.test(linhaAteCursor)) {
+      recuo += RECUO;
+    }
+    substituiTrecho(editor.selectionStart, editor.selectionEnd, '\n' + recuo);
+  }
+
+  // Tab recua; Esc libera o próximo Tab para mover o foco para fora do editor,
+  // para quem navega só pelo teclado não ficar preso na área de código.
+  let tabLiberado = false;
+
   editor.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      tabLiberado = true;
+      return;
+    }
+    if (e.key === 'Tab' && tabLiberado) {
+      tabLiberado = false;
+      return;
+    }
+    tabLiberado = false;
+
     if (e.key === 'Tab') {
       e.preventDefault();
-      const start = editor.selectionStart;
-      const end = editor.selectionEnd;
-      editor.value = editor.value.substring(0, start) + '    ' + editor.value.substring(end);
-      editor.selectionStart = editor.selectionEnd = start + 4;
-      atualizaLinhas();
-      atualizaCursorStats();
-      atualizaSyntaxHighlight();
+      if (e.shiftKey) {
+        removeRecuo();
+      } else {
+        substituiTrecho(editor.selectionStart, editor.selectionEnd, RECUO);
+      }
     } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       if (!btnExecutar.disabled) {
         executaCodigo();
       }
+    } else if (e.key === 'Enter' && !e.shiftKey && !e.altKey && !e.isComposing) {
+      e.preventDefault();
+      quebraLinhaComRecuo();
     }
+  });
+
+  editor.addEventListener('blur', () => {
+    tabLiberado = false;
   });
 
   // --- Alternância de Abas -------------------------------------------------
@@ -343,9 +428,7 @@
   // Botão Limpar
   btnLimpar.addEventListener('click', () => {
     editor.value = '';
-    atualizaLinhas();
-    atualizaCursorStats();
-    atualizaSyntaxHighlight();
+    aposEdicao();
     defineSaidaTerminal('terminal-system', '[Editor limpo. Digite ou escolha um exemplo acima.]');
     bilingueOutput.textContent = 'Execute o código para visualizar a comparação lado a lado.';
     canonicoOutput.innerHTML = geraHtmlDestaque('# O código Python puro canônico aparecerá aqui após a transpilação.');
@@ -358,9 +441,7 @@
     const chave = selectExemplo.value;
     if (EXEMPLOS[chave]) {
       editor.value = EXEMPLOS[chave];
-      atualizaLinhas();
-      atualizaCursorStats();
-      atualizaSyntaxHighlight();
+      aposEdicao();
       if (workerReady && !btnExecutar.disabled) {
         executaCodigo();
       }
@@ -576,8 +657,9 @@
   btnExecutar.addEventListener('click', executaCodigo);
   btnTentarNovamente.addEventListener('click', () => inicializaPyodide());
 
-  // Inicializa com o exemplo 1
-  editor.value = EXEMPLOS.ola || '';
+  // Restaura o rascunho salvo; sem rascunho, abre o exemplo 1.
+  const rascunho = leRascunho();
+  editor.value = rascunho !== null ? rascunho : (EXEMPLOS.ola || '');
   atualizaLinhas();
   atualizaCursorStats();
   atualizaSyntaxHighlight();
