@@ -28,7 +28,9 @@ class ScopeInfo:
     start_line: int
     start_column: int
     end_line: int
+    end_column: int
     protected_names: frozenset[str]
+    outer_iterable: tuple[tuple[int, int], tuple[int, int]] | None = None
 
 
 def _scope_key(node: ast.AST) -> tuple[str, str, int] | None:
@@ -50,25 +52,15 @@ def _scope_key(node: ast.AST) -> tuple[str, str, int] | None:
     return None
 
 
-def _scope_span(node: ast.AST) -> tuple[ast.AST, int, int] | None:
-    """Return the AST start node and line range covered by a scope."""
+def _scope_span(node: ast.AST) -> tuple[ast.AST, ast.AST] | None:
+    """Return the AST nodes delimiting the body of a scope."""
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
-        if not node.body:
-            return None
-        start_node = node.body[0]
-        end_node = node.body[-1]
-    elif isinstance(node, ast.Lambda):
-        start_node = end_node = node.body
-    elif isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
-        start_node = node
-        end_node = node
-    else:
-        return None
-    return (
-        start_node,
-        start_node.lineno,
-        getattr(end_node, "end_lineno", end_node.lineno),
-    )
+        return node.body[0], node.body[-1]
+    if isinstance(node, ast.Lambda):
+        return node.body, node.body
+    if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+        return node, node
+    return None
 
 
 def _map_canonical_column_to_source(
@@ -104,14 +96,18 @@ def _source_column_for_ast_node(
     node: ast.AST,
     canonical_lines: list[str],
     source_lines: dict[int, str],
+    *,
+    end: bool = False,
 ) -> int:
     """Convert an AST node column to the original PT source column."""
-    canonical_line = canonical_lines[node.lineno - 1] if node.lineno <= len(canonical_lines) else ""
-    source_line = source_lines.get(node.lineno, "")
+    line = node.end_lineno if end else node.lineno
+    column = node.end_col_offset if end else node.col_offset
+    canonical_line = canonical_lines[line - 1] if line <= len(canonical_lines) else ""
+    source_line = source_lines.get(line, "")
     return _map_canonical_column_to_source(
         canonical_line,
         source_line,
-        getattr(node, "col_offset", 0),
+        column,
     )
 
 
@@ -347,7 +343,7 @@ def build_scope_context(
     source_lines = {
         tok.start[0]: tok.line
         for tok in source_tokens
-        if tok.line is not None
+        if tok.line
     }
     tables_by_key: dict[tuple[str, str, int], list[symtable.SymbolTable]] = {}
     for table in _all_symbol_tables(module_table):
@@ -362,20 +358,45 @@ def build_scope_context(
         if key is None or span is None:
             continue
         matching_tables = tables_by_key.get(key, [])
-        if not matching_tables:
+        table = matching_tables.pop(0) if matching_tables else None
+        protected = _protected_names(table, module_table) if table else frozenset()
+        outer_iterable = None
+        if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
+            # Python 3.12 inlines some comprehensions in the enclosing symbol table.
+            # The AST still identifies their loop variables on every supported version.
+            protected |= {
+                target.id
+                for generator in node.generators
+                for target in ast.walk(generator.target)
+                if isinstance(target, ast.Name) and isinstance(target.ctx, ast.Store)
+            }
+            iterable = node.generators[0].iter
+            outer_iterable = (
+                (iterable.lineno, _source_column_for_ast_node(iterable, canonical_lines, source_lines)),
+                (iterable.end_lineno, _source_column_for_ast_node(
+                    iterable, canonical_lines, source_lines, end=True
+                )),
+            )
+        elif table is None:
             continue
-        table = matching_tables.pop(0)
-        start_node, start_line, end_line = span
+        start_node, end_node = span
         scopes.append(
             ScopeInfo(
-                start_line=start_line,
+                start_line=start_node.lineno,
                 start_column=_source_column_for_ast_node(
                     start_node,
                     canonical_lines,
                     source_lines,
                 ),
-                end_line=end_line,
-                protected_names=_protected_names(table, module_table),
+                end_line=end_node.end_lineno,
+                end_column=_source_column_for_ast_node(
+                    end_node,
+                    canonical_lines,
+                    source_lines,
+                    end=True,
+                ),
+                protected_names=frozenset(protected),
+                outer_iterable=outer_iterable,
             )
         )
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):

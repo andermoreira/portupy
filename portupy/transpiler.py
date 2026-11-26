@@ -23,6 +23,10 @@ from .escopo_canonico import ScopeInfo, build_scope_context
 class ErroDeTraducao(Exception):
     """Erro ao tentar transpilar o código-fonte em português."""
 
+    def __init__(self, *args: object, linha: int | None = None):
+        super().__init__(*args)
+        self.linha = linha
+
 
 # FSTRING_MIDDLE só existe no Python 3.12+ (PEP 701). Nas versões anteriores a
 # f-string é um único token STRING, então usamos um sentinela que nunca casa.
@@ -85,11 +89,18 @@ ASSIGNMENT_OPERATORS = {
 def _nome_em_declaracao_de_importacao(
     tokens: list[tokenize.TokenInfo], indice: int,
 ) -> bool:
-    """Preserva nomes que fazem parte da sintaxe de ``importe``/``de``."""
-    for tok in reversed(tokens[:indice]):
-        if tok.type in (token.NEWLINE, token.INDENT, token.DEDENT):
+    """Preserve names in the current import statement, including multiline imports."""
+    for position in range(indice - 1, -1, -1):
+        tok = tokens[position]
+        if tok.type in (token.NEWLINE, token.INDENT, token.DEDENT) or (
+            tok.type == token.OP and tok.string == ";"
+        ):
             break
-        if tok.type == token.NAME and tok.string in ("de", "importe", "import"):
+        if (
+            tok.type == token.NAME
+            and tok.string in ("de", "importe", "from", "import")
+            and _inicio_do_comando(tokens, position) == position
+        ):
             return True
     return False
 
@@ -319,7 +330,8 @@ def _tokeniza(leitor) -> list[tokenize.TokenInfo]:
     except IndentationError as exc:
         raise ErroDeTraducao(
             f"linha {exc.lineno}: o recuo desta linha não combina com nenhum bloco "
-            "anterior. Alinhe os espaços do início da linha com o bloco correspondente."
+            "anterior. Alinhe os espaços do início da linha com o bloco correspondente.",
+            linha=exc.lineno,
         ) from exc
     except tokenize.TokenError as exc:
         # An unclosed quote shows up as TokenError on 3.12+ and as a stray
@@ -333,13 +345,15 @@ def _tokeniza(leitor) -> list[tokenize.TokenInfo]:
             linha = f"linha {aspas.start[0]}: " if aspas is not None else ""
             raise ErroDeTraducao(
                 f"{linha}um texto entre aspas não foi fechado. "
-                "Confira se todas as aspas abertas têm o par de fechamento."
+                "Confira se todas as aspas abertas têm o par de fechamento.",
+                linha=aspas.start[0] if aspas is not None else exc.args[1][0],
             ) from exc
         if abertos and "multi-line statement" in mensagem:
             aberto = abertos[-1]
             raise ErroDeTraducao(
                 f"linha {aberto.start[0]}: o '{aberto.string}' aberto aqui não foi "
-                f"fechado. Confira se falta um '{_FECHA[aberto.string]}'."
+                f"fechado. Confira se falta um '{_FECHA[aberto.string]}'.",
+                linha=aberto.start[0],
             ) from exc
         if "multi-line statement" in mensagem:
             raise ErroDeTraducao(
@@ -353,7 +367,8 @@ def _tokeniza(leitor) -> list[tokenize.TokenInfo]:
 def _erro_de_comparacao(linha: int) -> ErroDeTraducao:
     return ErroDeTraducao(
         f"linha {linha}: numa condição, use '==' (ou 'eh') para comparar. "
-        "Um '=' sozinho serve para guardar um valor numa variável."
+        "Um '=' sozinho serve para guardar um valor numa variável.",
+        linha=linha,
     )
 
 
@@ -392,18 +407,23 @@ def _transpila_core(
         candidates = [
             scope
             for scope in scope_infos
-            if scope.start_line <= tok.start[0] <= scope.end_line
-            and (
-                tok.start[0] > scope.start_line
-                or tok.start[1] >= scope.start_column
-            )
+            if (scope.start_line, scope.start_column)
+            <= tok.start
+            < (scope.end_line, scope.end_column)
         ]
-        if not candidates:
-            return module_protected_names
-        return inherited_protected_names | max(
-            candidates,
-            key=lambda scope: (scope.start_column, scope.start_line),
-        ).protected_names
+        nested_scopes = [scope for scope in candidates if scope.outer_iterable is None]
+        protected = module_protected_names
+        if nested_scopes:
+            protected = inherited_protected_names | max(
+                nested_scopes,
+                key=lambda scope: (scope.start_line, scope.start_column),
+            ).protected_names
+        for scope in candidates:
+            if scope.outer_iterable is not None:
+                start, end = scope.outer_iterable
+                if not start <= tok.start < end:
+                    protected |= scope.protected_names
+        return protected
 
     i = 0
     n = len(fluxo)
@@ -435,7 +455,8 @@ def _transpila_core(
                     raise ErroDeTraducao(
                         f"linha {inicio[0]}: '{valor} se' é uma palavra reservada nesta "
                         f"linguagem (equivale a 'elif' em Python) e não pode "
-                        f"ser usada como nome de variável."
+                        f"ser usada como nome de variável.",
+                        linha=inicio[0],
                     )
                 tokens_saida.append((token.NAME, "elif", inicio, proximo.end, linha))
                 i += 2
@@ -452,7 +473,8 @@ def _transpila_core(
                 if _has_assignment_until_statement_end(fluxo, i):
                     raise ErroDeTraducao(
                         f"linha {inicio[0]}: '{valor} {proximo.string}' é uma expressão reservada nesta "
-                        f"linguagem e não pode ser usada como nome de variável."
+                        f"linguagem e não pode ser usada como nome de variável.",
+                        linha=inicio[0],
                     )
                 if proximo_2 is not None and proximo_2.string in SINGLETONS_DE_IDENTIDADE:
                     # 'is not' vira dois tokens; damos posições crescentes e sem
@@ -471,7 +493,8 @@ def _transpila_core(
                 if _has_assignment_until_statement_end(fluxo, i):
                     raise ErroDeTraducao(
                         f"linha {inicio[0]}: '{valor}' é uma palavra reservada nesta "
-                        f"linguagem e não pode ser usada como nome de variável."
+                        f"linguagem e não pode ser usada como nome de variável.",
+                        linha=inicio[0],
                     )
                 if proximo is not None and proximo.string in SINGLETONS_DE_IDENTIDADE:
                     tokens_saida.append((token.NAME, "is", inicio, fim, linha))
@@ -502,7 +525,8 @@ def _transpila_core(
                         f"linha {inicio[0]}: '{valor}' é uma palavra reservada nesta "
                         f"linguagem (equivale a '{MAPA[valor]}' em Python) e não pode "
                         f"ser usada como nome de variável. Escolha outro nome, "
-                        f"ex.: '{valor}_valor'."
+                        f"ex.: '{valor}_valor'.",
+                        linha=inicio[0],
                     )
                 valor = MAPA[valor]
             elif traduzir_builtins and valor in BUILTINS_CANONICOS:
@@ -516,7 +540,12 @@ def _transpila_core(
                     and anterior.string in ("classe", "class", "def", "funcao", "função")
                 )
                 eh_nome_importado = _nome_em_declaracao_de_importacao(fluxo, i)
-                eh_alvo_atribuicao = _has_assignment_until_statement_end(fluxo, i)
+                is_keyword_argument = (
+                    proximo is not None
+                    and proximo.type == token.OP
+                    and proximo.string == "="
+                    and _has_assignment_until_statement_end(fluxo, i)
+                )
                 eh_nome_vinculado = (
                     i in parameter_indices
                     or valor in names_protected_for(tok)
@@ -526,7 +555,7 @@ def _transpila_core(
                     not eh_definicao_funcao
                     and not eh_nome_declaracao
                     and not eh_nome_importado
-                    and not eh_alvo_atribuicao
+                    and not is_keyword_argument
                     and not eh_nome_vinculado
                 ):
                     valor = BUILTINS_CANONICOS[valor]

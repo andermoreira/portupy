@@ -15,7 +15,7 @@ test('executa código em português e exibe o Python canônico', async ({ page }
     timeout: 15000,
   });
 
-  await page.getByRole('tab', { name: /Lado a Lado/ }).click();
+  await page.getByRole('tab', { name: /Lado a lado/ }).click();
   await expect(page.locator('#bilingue-output')).toContainText('Português');
   await expect(page.locator('#bilingue-output')).toContainText('Python Canônico');
 
@@ -87,6 +87,44 @@ test('reabre o shell pelo Service Worker sem rede', async ({ page, context }) =>
   });
 });
 
+test('preserva o cache de outra aplicação ao ativar o Service Worker', async ({ page }) => {
+  await page.goto('/style.css');
+  await page.evaluate(async () => {
+    const cache = await caches.open('outro-aplicativo');
+    await cache.put('/outro-aplicativo/recurso', new Response('conteúdo preservado'));
+  });
+
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  const conteudo = await page.evaluate(async () => {
+    const resposta = await caches.match('/outro-aplicativo/recurso', {
+      cacheName: 'outro-aplicativo',
+    });
+    return resposta ? resposta.text() : null;
+  });
+  expect(conteudo).toBe('conteúdo preservado');
+});
+
+test('remove versões antigas do cache apenas no escopo do playground', async ({ page }) => {
+  await page.goto('/style.css');
+  const cachesAntigos = await page.evaluate(async () => {
+    const raiz = encodeURIComponent(new URL('./', location.href).href);
+    const outroPlayground = encodeURIComponent(new URL('./outro-playground/', location.href).href);
+    const local = `portupy-shell:${raiz}:v0`;
+    const outro = `portupy-shell:${outroPlayground}:v0`;
+    await Promise.all([caches.open(local), caches.open(outro)]);
+    return { local, outro };
+  });
+
+  await page.goto('/');
+  await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
+
+  const nomes = await page.evaluate(() => caches.keys());
+  expect(nomes).not.toContain(cachesAntigos.local);
+  expect(nomes).toContain(cachesAntigos.outro);
+});
+
 test('exibe diagnóstico de sintaxe e alterna abas pelo teclado', async ({ page }) => {
   await page.goto('/');
 
@@ -104,14 +142,14 @@ test('exibe diagnóstico de sintaxe e alterna abas pelo teclado', async ({ page 
   const terminalTab = page.getByRole('tab', { name: /Terminal/ });
   await terminalTab.focus();
   await terminalTab.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: /Lado a Lado/ })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: /Lado a lado/ })).toHaveAttribute(
     'aria-selected',
     'true'
   );
 });
 
 test('mantém o playground utilizável em viewport estreito', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 320, height: 812 });
   await page.goto('/');
 
   await expect(page.locator('#status-text')).toHaveText('Python Pronto (Wasm)', {
@@ -122,8 +160,28 @@ test('mantém o playground utilizável em viewport estreito', async ({ page }) =
     larguraViewport: document.documentElement.clientWidth,
   }));
   expect(dimensoes.larguraDocumento).toBeLessThanOrEqual(dimensoes.larguraViewport);
+  await expect(page.locator('#btn-tentar-novamente')).toBeHidden();
   await expect(page.locator('#select-exemplo')).toBeVisible();
   await expect(page.locator('#code-editor')).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const header = document.querySelector('.navbar').getBoundingClientRect();
+    const select = document.querySelector('#select-exemplo').getBoundingClientRect();
+    const run = document.querySelector('#btn-executar').getBoundingClientRect();
+    const tabs = document.querySelector('.tabs-nav');
+    return {
+      selectorInsideHeader: select.bottom <= header.bottom,
+      runInsideViewport: run.right <= document.documentElement.clientWidth,
+      tabsFit: tabs.scrollWidth <= tabs.clientWidth,
+    };
+  });
+  expect(layout).toEqual({
+    selectorInsideHeader: true,
+    runInsideViewport: true,
+    tabsFit: true,
+  });
+  await page.getByRole('tab', { name: /Python Canônico/ }).click();
+  await expect(page.locator('#tab-canonico')).toBeVisible();
 });
 
 test('explica de forma amigável que a entrada com leia não funciona no navegador', async ({ page }) => {
@@ -175,6 +233,19 @@ test('Shift+Tab remove o recuo da linha em vez de inserir espaços', async ({ pa
   await expect(editor).toHaveValue('se verdadeiro:\n    x = 1');
 });
 
+test('Shift+Tab na primeira linha vazia preserva o recuo da linha seguinte', async ({ page }) => {
+  await page.goto('/');
+
+  const editor = page.locator('#code-editor');
+  const codigo = '\n    mostre(1)';
+  await editor.fill(codigo);
+  await editor.evaluate((elemento) => elemento.setSelectionRange(0, 0));
+  await editor.press('Shift+Tab');
+
+  await expect(editor).toHaveValue(codigo);
+  await expect(editor).toBeFocused();
+});
+
 test('Esc libera o Tab para sair do editor pelo teclado', async ({ page }) => {
   await page.goto('/');
 
@@ -194,4 +265,60 @@ test('preserva o código digitado ao recarregar a página', async ({ page }) => 
   await page.reload();
 
   await expect(page.locator('#code-editor')).toHaveValue('mostre("rascunho salvo")');
+});
+
+test('recupera o código editado depois de explorar exemplos e recarregar', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.locator('#code-editor');
+  await editor.fill('mostre("meu rascunho")');
+  await page.locator('#select-exemplo').selectOption('loop');
+  await page.locator('#select-exemplo').selectOption('funcoes');
+  await page.getByRole('button', { name: 'Voltar ao meu código' }).click();
+  await expect(editor).toHaveValue('mostre("meu rascunho")');
+  await expect(editor).toBeFocused();
+  await page.locator('#select-exemplo').selectOption('loop');
+  await page.reload();
+  await expect(editor).toHaveValue('mostre("meu rascunho")');
+});
+
+test('vai até a linha do erro no editor', async ({ page }) => {
+  await page.goto('/');
+  const editor = page.locator('#code-editor');
+  await expect(page.locator('#btn-executar')).toBeEnabled();
+  await editor.fill('x = 1\nmostre(x / 0)\nmostre(x)');
+  await page.locator('#btn-executar').click();
+  await page.getByRole('button', { name: 'Ir para a linha 2' }).click();
+  await expect(editor).toBeFocused();
+  const trecho = await editor.evaluate((el) => el.value.slice(el.selectionStart, el.selectionEnd));
+  expect(trecho).toBe('mostre(x / 0)');
+  await editor.fill('mostre(1)');
+  await expect(page.getByRole('button', { name: 'Ir para a linha 2' })).toBeHidden();
+});
+
+test('baixa apenas o Python canônico válido da execução atual', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#btn-executar')).toBeEnabled();
+  const editor = page.locator('#code-editor');
+  await editor.fill('resultado = [list(lista) para lista em lista(((1, 2),))]');
+  await page.locator('#btn-executar').click();
+  await page.getByRole('tab', { name: /Python Canônico/ }).click();
+  const button = page.getByRole('button', { name: 'Baixar .py' });
+  await expect(button).toBeEnabled();
+  const transfer = page.waitForEvent('download');
+  await button.click();
+  const download = await transfer;
+  expect(download.suggestedFilename()).toBe('script.py');
+  const source = require('node:fs').readFileSync(await download.path(), 'utf8');
+  const result = require('node:child_process').spawnSync('python3', [
+    '-c', source + '\nassert resultado == [[1, 2]]',
+  ], { encoding: 'utf8' });
+  expect(result.status, result.stderr).toBe(0);
+
+  await editor.fill('se verdadeiro\n    mostre(1)');
+  await expect(button).toBeDisabled();
+  await page.locator('#btn-executar').click();
+  await expect(page.locator('#output-status')).toHaveText('Status: Erro (1)');
+  await expect(page.getByRole('button', { name: 'Ir para a linha 1' })).toBeVisible();
+  await page.getByRole('tab', { name: /Python Canônico/ }).click();
+  await expect(button).toBeDisabled();
 });

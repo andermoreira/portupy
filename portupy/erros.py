@@ -21,6 +21,8 @@ from .dicionario import BUILTINS_CANONICOS, PALAVRAS_CHAVE
 
 Regra = tuple[type[BaseException], re.Pattern, Callable[[re.Match], str]]
 
+NOME_FONTE_PT = "<codigo_pt>"
+
 MENSAGEM_ENTRADA_PLAYGROUND = (
     "A leitura de entrada com 'leia' (input) não funciona no playground do "
     "navegador, porque aqui não há teclado conectado ao programa como no "
@@ -249,27 +251,26 @@ def _map_generated_column_to_source(column: int, source_line: str, generated_lin
     return min(generated_position, len(source_line)) + 1
 
 
+def localiza_erro(exc: BaseException) -> tuple[int | None, int | None]:
+    """Return the line and column in the current PortuPy program."""
+    if isinstance(exc, SyntaxError) and exc.filename == NOME_FONTE_PT:
+        return exc.lineno, exc.offset
+    linha = None
+    tb = exc.__traceback__
+    while tb is not None:
+        if tb.tb_frame.f_code.co_filename == NOME_FONTE_PT:
+            linha = tb.tb_lineno
+        tb = tb.tb_next
+    return linha, None
+
+
 def formata_erro_amigavel(
     exc: BaseException,
     linhas_fonte_pt: list[str],
     linhas_fonte_py: list[str] | None = None,
 ) -> str:
-    """Monta uma mensagem de erro amigável apontando para a linha do
-    arquivo .ptpy original (não do Python gerado internamente)."""
-    linha_numero = None
-    coluna = None
-
-    if isinstance(exc, SyntaxError):
-        linha_numero = exc.lineno
-        coluna = exc.offset
-    else:
-        tb = exc.__traceback__
-        # Anda até o último frame que pertence ao código do usuário
-        # (compilado com o nome de arquivo especial "<codigo_pt>")
-        while tb is not None:
-            if tb.tb_frame.f_code.co_filename == "<codigo_pt>":
-                linha_numero = tb.tb_lineno
-            tb = tb.tb_next
+    """Monta uma mensagem amigável usando a linha do .ptpy original."""
+    linha_numero, coluna = localiza_erro(exc)
 
     partes = [
         "⚠️  Deu erro do tipo: "
@@ -297,6 +298,7 @@ def formata_erro_amigavel(
         if sugestao:
             partes.append(f"   {sugestao}")
     else:
-        partes.append(f"   Detalhe técnico (ainda sem tradução): {exc}")
+        detalhe = exc.msg if isinstance(exc, SyntaxError) else str(exc)
+        partes.append(f"   Detalhe técnico (ainda sem tradução): {detalhe}")
 
     return "\n".join(partes)

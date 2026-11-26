@@ -197,6 +197,36 @@ class TestTranspiler(unittest.TestCase):
 
         self.assertEqual(5, ns.get("resultado"))
 
+    def test_canonical_builtin_before_keyword_argument(self):
+        source = (
+            "funcao escolher(valor, tamanho): retorne valor, tamanho\n"
+            "resultado = escolher(lista((2, 1)), tamanho=3)\n"
+        )
+        namespace = {}
+
+        exec(transpila_canonico(source), namespace)
+
+        self.assertEqual(([2, 1], 3), namespace["resultado"])
+
+    def test_canonical_builtin_after_import_statement(self):
+        source = "importe math; resultado = tamanho([1, 2])\n"
+        namespace = {}
+
+        exec(transpila_canonico(source), namespace)
+
+        self.assertEqual(2, namespace["resultado"])
+        self.assertEqual(2, namespace["math"].isqrt(4))
+
+    def test_canonical_builtin_after_lambda_body(self):
+        source = (
+            "resultado = ((lambda tamanho: tamanho)(5), tamanho([1, 2]))\n"
+        )
+        namespace = {}
+
+        exec(transpila_canonico(source), namespace)
+
+        self.assertEqual((5, 2), namespace["resultado"])
+
     def test_transpila_canonico_preserva_sombreamento_de_builtin_em_fstring(self):
         """Valida que expressões de f-string respeitam o escopo da função."""
         codigo_pt = (
@@ -230,6 +260,19 @@ class TestTranspiler(unittest.TestCase):
                 ns = {}
                 exec(codigo_py, {}, ns)
                 self.assertEqual(esperado, ns.get("resultado"))
+
+    def test_canonical_comprehension_keeps_target_and_translates_outer_iterable(self):
+        cases = (
+            ("[list(lista) para lista em lista(((1, 2),))]", [[1, 2]]),
+            ("{lista para lista em lista((1, 2))}", {1, 2}),
+            ("{lista: lista para lista em lista((1, 2))}", {1: 1, 2: 2}),
+            ("tuple(lista para lista em lista((1, 2)))", (1, 2)),
+        )
+        for expression, expected in cases:
+            with self.subTest(expression=expression):
+                namespace = {}
+                exec(transpila_canonico(f"resultado = {expression}"), namespace)
+                self.assertEqual(namespace["resultado"], expected)
 
     def test_estruturas_de_controle_adicionais_geram_python_compilavel(self):
         """Garante que classes e tratamento de exceções permaneçam parte do contrato."""
