@@ -70,6 +70,33 @@ class TestExecutor(unittest.TestCase):
         self.assertIn("Na linha 1: se verdadeiro", f.getvalue())
         self.assertNotIn("Traceback", f.getvalue())
 
+    def test_executa_codigo_aponta_chamada_quando_sintaxe_falha_em_outra_fonte(self):
+        codigo = (
+            "fonte = 'x = 1\\nif True'\n"
+            "arquivo = 'outro.py'\n"
+            "compile(fonte, arquivo, 'exec')\n"
+        )
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            status = executa_codigo(codigo)
+        self.assertEqual(1, status)
+        self.assertIn("Na linha 3: compile(fonte, arquivo, 'exec')", stderr.getvalue())
+        self.assertNotIn("^", stderr.getvalue())
+
+    def test_executa_codigo_isola_flags_de_anotacoes_do_executor(self):
+        codigo = (
+            "funcao exemplo() -> int:\n"
+            "    passe\n"
+            "mostre(exemplo.__annotations__['return'] is int)\n"
+        )
+        for futuro, esperado in (("", "True\n"), ("de __future__ importe annotations\n", "False\n")):
+            with self.subTest(futuro=futuro):
+                stdout = io.StringIO()
+                with contextlib.redirect_stdout(stdout):
+                    status = executa_codigo(futuro + codigo)
+                self.assertEqual(0, status)
+                self.assertEqual(esperado, stdout.getvalue())
+
     def test_executa_arquivo_inexistente(self):
         f = io.StringIO()
         with contextlib.redirect_stderr(f):

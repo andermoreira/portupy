@@ -75,6 +75,7 @@ import io
 import json
 import portupy
 from portupy.erros import EntradaIndisponivelError
+from portupy.executor import _executa_codigo
 
 
 def _entrada_indisponivel(*args, **kwargs):
@@ -94,11 +95,18 @@ def _processa_codigo_web(codigo_pt):
         "stdout": "",
         "stderr": "",
         "canonico": "",
+        "exportavel": False,
+        "linha_erro": None,
         "lado_a_lado": ""
     }
 
     try:
-        resultado["canonico"] = portupy.transpila_canonico(codigo_pt)
+        canonico = portupy.transpila_canonico(codigo_pt)
+        resultado["canonico"] = canonico
+        compile(canonico, "script.py", "exec", dont_inherit=True)
+        resultado["exportavel"] = bool(canonico.strip())
+    except SyntaxError:
+        pass
     except Exception as exc:
         resultado["canonico"] = f"# Erro ao gerar Python canonico: {exc}"
 
@@ -115,7 +123,7 @@ def _processa_codigo_web(codigo_pt):
     stderr_buf = io.StringIO()
     with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
         try:
-            resultado["status"] = portupy.executa_codigo(codigo_pt)
+            resultado["status"], resultado["linha_erro"] = _executa_codigo(codigo_pt)
         except Exception as exc:
             resultado["status"] = 1
             stderr_buf.write(f"Excecao inesperada: {exc}\\n")

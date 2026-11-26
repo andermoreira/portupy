@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 
 from .dicionario import BUILTINS_PT
-from .erros import formata_erro_amigavel
+from .erros import NOME_FONTE_PT, formata_erro_amigavel, localiza_erro
 from .transpiler import ErroDeTraducao, transpila
 
 
@@ -21,13 +21,18 @@ def executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> int:
     do sistema de arquivos da máquina — isso reduz a superfície da CLI, mas não
     é garantia absoluta de sandbox (ver ADR-004). Ver também o aviso no README.
     """
+    status, _ = _executa_codigo(codigo_pt, mostrar_python)
+    return status
+
+
+def _executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> tuple[int, int | None]:
     linhas_fonte_pt = codigo_pt.splitlines()
 
     try:
         codigo_python = transpila(codigo_pt)
     except ErroDeTraducao as exc:
         print(f"⚠️  Erro ao traduzir seu código: {exc}", file=sys.stderr)
-        return 1
+        return 1, exc.linha
 
     if mostrar_python:
         print("--- código Python gerado ---")
@@ -35,9 +40,7 @@ def executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> int:
         print("----------------------------")
 
     try:
-        # nome de arquivo especial: é assim que formata_erro_amigavel
-        # reconhece qual frame do traceback pertence ao código do usuário
-        compilado = compile(codigo_python, "<codigo_pt>", "exec")
+        compilado = compile(codigo_python, NOME_FONTE_PT, "exec", dont_inherit=True)
         # Sem '__builtins__' restrito: o Python injeta os builtins reais, o que é
         # intencional (não é sandbox). Ver a docstring da função para o porquê.
         contexto = {"__name__": "__main__", **BUILTINS_PT}
@@ -45,15 +48,16 @@ def executa_codigo(codigo_pt: str, mostrar_python: bool = False) -> int:
     except KeyboardInterrupt:
         # Ctrl+C num laço infinito é comum para iniciantes: sem traceback.
         print("\n⏹️  Programa interrompido (Ctrl+C).", file=sys.stderr)
-        return 130
+        return 130, None
     except Exception as exc:
         print(
             formata_erro_amigavel(exc, linhas_fonte_pt, codigo_python.splitlines()),
             file=sys.stderr,
         )
-        return 1
+        linha, _ = localiza_erro(exc)
+        return 1, linha
 
-    return 0
+    return 0, None
 
 
 def executa_arquivo(caminho: str, mostrar_python: bool = False) -> int:

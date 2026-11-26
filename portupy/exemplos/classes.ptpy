@@ -1,21 +1,23 @@
 # Exemplo de classes (POO): definir um tipo com atributos e métodos
+# O primeiro parâmetro recebe o próprio objeto. Aqui se chama instância.
+# Na maioria dos exemplos de Python, esse parâmetro se chama self.
 
 classe Conta:
-    funcao __init__(self, dono, saldo=0):
-        self.dono = dono
-        self.saldo = saldo
+    funcao __init__(instância, dono, saldo=0):
+        instância.dono = dono
+        instância.saldo = saldo
 
-    funcao depositar(self, valor):
-        self.saldo = self.saldo + valor
+    funcao depositar(instância, valor):
+        instância.saldo = instância.saldo + valor
 
-    funcao sacar(self, valor):
-        se valor > self.saldo:
+    funcao sacar(instância, valor):
+        se valor > instância.saldo:
             mostre(f"Saldo insuficiente para sacar R$ {valor:.2f}")
         senao:
-            self.saldo = self.saldo - valor
+            instância.saldo = instância.saldo - valor
 
-    funcao resumo(self):
-        retorne f"{self.dono} tem R$ {self.saldo:.2f}"
+    funcao resumo(instância):
+        retorne f"{instância.dono} tem R$ {instância.saldo:.2f}"
 
 conta = Conta("Ana", 100)
 conta.depositar(50)

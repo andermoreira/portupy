@@ -15,9 +15,11 @@ from portupy import (
     ErroDeTraducao,
     __version__,
     executa_arquivo,
+    executa_codigo,
     renderiza_lado_a_lado,
     transpila_canonico,
 )
+from portupy.erros import NOME_FONTE_PT, formata_erro_amigavel
 from portupy.servidor import inicia_servidor_web
 
 
@@ -147,54 +149,49 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     caminho_pt = args.arquivo
+    if args.exportar is None and not args.modo_transicao:
+        return executa_arquivo(caminho_pt, mostrar_python=args.mostrar_python)
 
-    # Modo Exportar (--exportar [destino.py])
-    if args.exportar is not None:
-        destino = None if args.exportar == "-" else args.exportar
+    try:
+        with open(caminho_pt, "r", encoding="utf-8") as f:
+            codigo_pt = f.read()
+    except (OSError, UnicodeError) as exc:
+        print(f"Não consegui ler o arquivo: {exc}", file=sys.stderr)
+        return 1
 
-        try:
-            with open(caminho_pt, "r", encoding="utf-8") as f:
-                codigo_pt = f.read()
-        except (OSError, UnicodeError) as exc:
-            print(f"Não consegui ler o arquivo: {exc}", file=sys.stderr)
-            return 1
+    try:
+        codigo_py = transpila_canonico(codigo_pt)
+    except ErroDeTraducao as exc:
+        print(f"Erro ao traduzir: {exc}", file=sys.stderr)
+        return 1
 
-        try:
-            codigo_py = transpila_canonico(codigo_pt)
-        except ErroDeTraducao as exc:
-            print(f"Erro ao traduzir: {exc}", file=sys.stderr)
-            return 1
+    try:
+        compile(codigo_py, NOME_FONTE_PT, "exec", dont_inherit=True)
+    except SyntaxError as exc:
+        print(
+            formata_erro_amigavel(exc, codigo_pt.splitlines(), codigo_py.splitlines()),
+            file=sys.stderr,
+        )
+        return 1
 
-        if destino is None:
-            print(codigo_py)
-            return 0
-
-        try:
-            with open(destino, "w", encoding="utf-8") as f:
-                f.write(codigo_py)
-            print(f"✨ Código Python canônico exportado com sucesso para: {destino}")
-            return 0
-        except OSError as exc:
-            print(f"⚠️ Não consegui salvar o arquivo exportado: {exc}", file=sys.stderr)
-            return 1
-
-    # Modo Lado a Lado / Transição (--lado-a-lado ou --modo-transicao)
     if args.modo_transicao:
-        try:
-            with open(caminho_pt, "r", encoding="utf-8") as f:
-                codigo_pt = f.read()
-            codigo_py = transpila_canonico(codigo_pt)
-            print(renderiza_lado_a_lado(codigo_pt, codigo_py))
-            print()
-        except (OSError, UnicodeError) as exc:
-            print(f"Não consegui ler o arquivo: {exc}", file=sys.stderr)
-            return 1
+        print(renderiza_lado_a_lado(codigo_pt, codigo_py))
+        print()
+        return executa_codigo(codigo_pt, mostrar_python=args.mostrar_python)
 
-        except ErroDeTraducao as exc:
-            print(f"Erro ao traduzir: {exc}", file=sys.stderr)
-            return 1
+    if args.exportar == "-":
+        print(codigo_py)
+        return 0
 
-    return executa_arquivo(caminho_pt, mostrar_python=args.mostrar_python)
+    try:
+        with open(args.exportar, "w", encoding="utf-8") as f:
+            f.write(codigo_py)
+    except OSError as exc:
+        print(f"⚠️ Não consegui salvar o arquivo exportado: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"✨ Código Python canônico exportado com sucesso para: {args.exportar}")
+    return 0
 
 
 if __name__ == "__main__":

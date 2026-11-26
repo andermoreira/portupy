@@ -16,6 +16,8 @@
   const selectExemplo = document.getElementById('select-exemplo');
   const btnExecutar = document.getElementById('btn-executar');
   const btnLimpar = document.getElementById('btn-limpar');
+  const btnRestaurarRascunho = document.getElementById('btn-restaurar-rascunho');
+  const btnBaixarPython = document.getElementById('btn-baixar-python');
   const btnCopiar = document.getElementById('btn-copiar-saida');
   const btnTentarNovamente = document.getElementById('btn-tentar-novamente');
   
@@ -45,6 +47,8 @@
   let workerInitPromise = null;
   let pendingExecution = null;
   let abaAtiva = 'terminal';
+  let pythonExportavel = '';
+  let btnLinhaErro = null;
 
   function defineSaidaTerminal(classe, texto) {
     const linha = document.createElement('div');
@@ -216,20 +220,47 @@
     }
   }
 
+  let rascunho = leRascunho();
+
   function salvaRascunho() {
+    rascunho = editor.value;
     try {
-      window.localStorage.setItem(CHAVE_RASCUNHO, editor.value);
+      window.localStorage.setItem(CHAVE_RASCUNHO, rascunho);
     } catch (error) {
       // Sem armazenamento disponível: o editor segue funcionando normalmente.
     }
   }
 
-  function aposEdicao() {
+  function aposEdicao({ salvar = true } = {}) {
     atualizaLinhas();
     atualizaCursorStats();
     atualizaSyntaxHighlight();
-    salvaRascunho();
+    if (salvar) {
+      salvaRascunho();
+      selectExemplo.value = '';
+    }
+    btnRestaurarRascunho.hidden = rascunho === null || editor.value === rascunho;
+    if (pythonExportavel || btnLinhaErro) {
+      outputStatus.textContent = 'Código alterado. Execute novamente.';
+    }
+    invalidaAcoesDaSaida();
   }
+
+  function invalidaAcoesDaSaida() {
+    pythonExportavel = '';
+    btnBaixarPython.disabled = true;
+    btnLinhaErro?.remove();
+    btnLinhaErro = null;
+  }
+
+  btnRestaurarRascunho.addEventListener('click', () => {
+    editor.value = rascunho;
+    aposEdicao();
+    editor.focus();
+    if (workerReady && !btnExecutar.disabled) {
+      executaCodigo();
+    }
+  });
 
   editor.addEventListener('input', aposEdicao);
 
@@ -262,6 +293,7 @@
   }
 
   function inicioDaLinha(posicao) {
+    if (posicao === 0) return 0;
     return editor.value.lastIndexOf('\n', posicao - 1) + 1;
   }
 
@@ -425,6 +457,38 @@
     }
   });
 
+  btnBaixarPython.addEventListener('click', () => {
+    if (!pythonExportavel) return;
+    const arquivo = new Blob([pythonExportavel], { type: 'text/x-python;charset=utf-8' });
+    const endereco = URL.createObjectURL(arquivo);
+    const link = document.createElement('a');
+    link.href = endereco;
+    link.download = 'script.py';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(endereco), 1000);
+  });
+
+  function mostraAcaoLinhaErro(linha, codigo) {
+    const linhas = codigo.split('\n');
+    if (!Number.isInteger(linha) || linha < 1 || linha > linhas.length) return;
+    const inicio = linhas.slice(0, linha - 1)
+      .reduce((total, trecho) => total + trecho.length + 1, 0);
+    btnLinhaErro = document.createElement('button');
+    btnLinhaErro.type = 'button';
+    btnLinhaErro.className = 'btn btn-secondary terminal-error-action';
+    btnLinhaErro.textContent = `Ir para a linha ${linha}`;
+    btnLinhaErro.addEventListener('click', () => {
+      editor.focus();
+      editor.setSelectionRange(inicio, inicio + linhas[linha - 1].length);
+      const alturaLinha = parseFloat(getComputedStyle(editor).lineHeight);
+      editor.scrollTop = Math.max(0, (linha - 1) * alturaLinha - editor.clientHeight / 3);
+      atualizaCursorStats();
+    });
+    terminalOutput.append(btnLinhaErro);
+  }
+
   // Botão Limpar
   btnLimpar.addEventListener('click', () => {
     editor.value = '';
@@ -441,7 +505,7 @@
     const chave = selectExemplo.value;
     if (EXEMPLOS[chave]) {
       editor.value = EXEMPLOS[chave];
-      aposEdicao();
+      aposEdicao({ salvar: false });
       if (workerReady && !btnExecutar.disabled) {
         executaCodigo();
       }
@@ -586,8 +650,9 @@
   }
 
   async function executaCodigo() {
-    if (!pyodideWorker || !workerReady) return;
+    if (!pyodideWorker || !workerReady || pendingExecution) return;
 
+    invalidaAcoesDaSaida();
     const codigo = editor.value;
     if (!codigo.trim()) {
       defineSaidaTerminal('terminal-system', '[Código vazio. Digite algo no editor.]');
@@ -601,6 +666,10 @@
     try {
       const jsonStr = await solicitaExecucao(codigo);
       const dados = JSON.parse(jsonStr);
+      if (editor.value !== codigo) {
+        outputStatus.textContent = 'Código alterado. Execute novamente.';
+        return;
+      }
 
       const duracao = Math.round(performance.now() - inicio);
       executionTime.textContent = `Tempo: ${duracao} ms`;
@@ -625,11 +694,21 @@
         defineSaidaTerminal('terminal-success', '✓ Código executado com sucesso (sem saída gerada).');
       }
 
+      if (dados.status !== 0) {
+        ativaAba('terminal');
+        mostraAcaoLinhaErro(dados.linha_erro, codigo);
+      }
+
       // Atualiza Lado a Lado
       bilingueOutput.textContent = dados.lado_a_lado || 'Nenhuma saída comparativa gerada.';
 
       // Atualiza Canônico (com realce de sintaxe reaproveitado do editor)
       canonicoOutput.innerHTML = geraHtmlDestaque(dados.canonico || '# Nenhum código gerado.');
+
+      if (dados.exportavel) {
+        pythonExportavel = dados.canonico;
+        btnBaixarPython.disabled = false;
+      }
 
       outputStatus.textContent = (dados.status === 0) ? 'Status: Sucesso (0)' : 'Status: Erro (1)';
 
@@ -658,8 +737,10 @@
   btnTentarNovamente.addEventListener('click', () => inicializaPyodide());
 
   // Restaura o rascunho salvo; sem rascunho, abre o exemplo 1.
-  const rascunho = leRascunho();
   editor.value = rascunho !== null ? rascunho : (EXEMPLOS.ola || '');
+  if (rascunho !== null) {
+    selectExemplo.value = '';
+  }
   atualizaLinhas();
   atualizaCursorStats();
   atualizaSyntaxHighlight();

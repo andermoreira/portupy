@@ -1,4 +1,6 @@
-const CACHE_NAME = 'portupy-shell-v2';
+// Cache Storage is shared across service worker registrations on this origin.
+const CACHE_PREFIX = `portupy-shell:${encodeURIComponent(self.registration.scope)}:`;
+const CACHE_NAME = `${CACHE_PREFIX}v4`;
 // Assets versionados e imutáveis (o caminho carrega a versão do Pyodide).
 // Servi-los cache-first evita rebaixar o runtime pesado (.wasm/.zip) a cada
 // reabertura online; só a rede é consultada quando ainda não estão em cache.
@@ -46,7 +48,7 @@ self.addEventListener('activate', (event) => {
     caches.keys()
       .then((cacheNames) => Promise.all(
         cacheNames
-          .filter((cacheName) => cacheName !== CACHE_NAME)
+          .filter((cacheName) => cacheName.startsWith(CACHE_PREFIX) && cacheName !== CACHE_NAME)
           .map((cacheName) => caches.delete(cacheName))
       ))
       .then(() => self.clients.claim())

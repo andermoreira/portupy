@@ -137,6 +137,39 @@ class TestCLI(unittest.TestCase):
         self.assertIn("Português", saida)
         self.assertIn("Python Canônico", saida)
 
+    def test_cli_diagnostica_sintaxe_antes_de_exibir_ou_exportar(self):
+        with open(self.script_pt, "w", encoding="utf-8") as f:
+            f.write("se verdadeiro\n    passe\n")
+        destino = os.path.join(self.temp_dir.name, "invalido.py")
+
+        for flags in (["--lado-a-lado"], ["--exportar"], ["--exportar", destino]):
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            with self.subTest(flags=flags), contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                status = cli.main([self.script_pt, *flags])
+                self.assertEqual(1, status)
+                self.assertEqual("", stdout.getvalue())
+                self.assertIn("Na linha 1: se verdadeiro", stderr.getvalue())
+                self.assertIn("dois pontos", stderr.getvalue())
+                self.assertFalse(os.path.exists(destino))
+
+    def test_cli_executa_a_mesma_fonte_exibida_lado_a_lado(self):
+        renderiza = cli.renderiza_lado_a_lado
+
+        def altera_arquivo_apos_leitura(codigo_pt, codigo_py):
+            with open(self.script_pt, "w", encoding="utf-8") as f:
+                f.write("mostre('conteúdo alterado')\n")
+            return renderiza(codigo_pt, codigo_py)
+
+        stdout = io.StringIO()
+        with (
+            patch.object(cli, "renderiza_lado_a_lado", side_effect=altera_arquivo_apos_leitura),
+            contextlib.redirect_stdout(stdout),
+        ):
+            status = cli.main([self.script_pt, "--lado-a-lado"])
+        self.assertEqual(0, status)
+        self.assertEqual("ola mundo", stdout.getvalue().splitlines()[-1])
+
     def test_cli_web_padrao(self):
         """CLI com --web chama inicia_servidor_web na porta padrão 8000 (AC-07)."""
         with patch("portupy.cli.inicia_servidor_web") as mock_inicia:

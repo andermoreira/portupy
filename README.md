@@ -161,6 +161,21 @@ não oferece sandbox; execute somente código confiável.
 
 A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou no arquivo informado.
 
+## Usar o playground
+
+- Edite o programa e selecione **Executar**. Se o terminal indicar uma linha, use
+  **Ir para a linha** para selecioná-la no editor.
+- Use **Exemplos** para explorar outros programas. **Voltar ao meu código** restaura o
+  rascunho mais recente. O navegador também restaura esse rascunho ao recarregar a página,
+  quando o armazenamento local está disponível.
+- Depois de executar, abra **Python Canônico** e selecione **Baixar .py** para salvar
+  a versão válida da tradução como `script.py`. Após editar o código, execute de novo
+  para atualizar o arquivo.
+
+No exemplo de classes, `instância` é o nome dado ao primeiro parâmetro dos métodos.
+Python costuma usar `self` por convenção. Métodos como `split()` e nomes especiais
+como `__init__` mantêm a grafia do Python.
+
 ## O que já funciona
 
 - **Injeção de builtins no runtime (ADR-001):** Funções e tipos selecionados (`mostre`, `leia`, `tamanho`, `intervalo`, `lista`, `texto`, etc.) são injetados diretamente no ambiente de execução.
@@ -173,7 +188,7 @@ A CLI retorna código `0` em caso de sucesso e `1` quando há erro no código ou
 - **Playground web com Pyodide (ADR-004):** Aplicação que executa o código no navegador via WebAssembly (Wasm). Inclui editor em português, visualização bilíngue lado a lado, exportação e catálogo de exemplos didáticos. Não requer instalação local nem servidor backend. O editor mantém o recuo ao pressionar Enter (e recua após `:`), remove recuo com Shift+Tab, guarda o rascunho no navegador e libera a saída pelo teclado com Esc seguido de Tab.
 - **Execução em Worker no navegador:** O Pyodide roda em um Worker dedicado. Se a execução ultrapassar 10 segundos, o Worker é encerrado e um ambiente novo é inicializado sem bloquear a interface.
 - **Nomes de variáveis comuns:** Nomes como `lista = [1, 2, 3]`, `texto = "olá"` e `tipo = 10` podem ser usados sem colidir com palavras reservadas nem ser alterados indevidamente na exportação.
-- **Preservação de atributos de objetos:** Acessos e atribuições como `objeto.tipo` e `self.tipo = valor` são preservados sem substituição indevida de tokens.
+- **Preservação de atributos de objetos:** Acessos e atribuições como `objeto.tipo` e `instância.tipo = valor` são preservados sem substituição indevida de tokens.
 - **Números de linha e apontador visual:** Tracebacks apontam 1:1 para a linha do `.ptpy` original, e erros de compilação exibem o trecho de código com o cursor `^`.
 - **Tradução de erros:** Cobertura de `SyntaxError`, `IndentationError`, `IndexError`, `NameError`, `ZeroDivisionError`, `TypeError`, `AttributeError`, `ValueError`, entre outros.
 - **Detecção de colisão com palavras estruturais:** Tentar atribuir a palavras-chave da sintaxe (`para = 5`, `se = 1`, `senao se = 2`) gera uma explicação antes que o interpretador produza um erro de sintaxe.
